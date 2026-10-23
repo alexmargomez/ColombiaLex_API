@@ -1,0 +1,7 @@
+# Asegurar que GitHub Linguist clasifique el repositorio principalmente como Java
+*.java linguist-detectable=true
+frontend/package-lock.json linguist-generated=true
+frontend/dist/** linguist-generated=true
+frontend/public/** linguist-vendored=true
+*.svg linguist-documentation=true
+*.md linguist-documentation=true

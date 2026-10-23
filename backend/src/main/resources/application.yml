@@ -1,0 +1,26 @@
+server:
+  port: ${SERVER_PORT:${BACKEND_PORT:8085}}
+
+spring:
+  application:
+    name: colombialex-api
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${MARIADB_DATABASE:colombialex_db}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
+    username: ${MARIADB_USER:colombialex_user}
+    password: ${MARIADB_PASSWORD:colombialex_pass_2026}
+    driver-class-name: ${DB_DRIVER:org.mariadb.jdbc.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+
+springdoc:
+  api-docs:
+    path: /api/v1/openapi
+  swagger-ui:
+    path: /api/v1/swagger-ui.html
+    operationsSorter: method

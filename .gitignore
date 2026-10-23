@@ -1,0 +1,27 @@
+# Entorno local (Intocable en Git - sincronizado por ALpanel)
+.env
+.env.local
+.env.*.local
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+mvnw
+mvnw.cmd
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+
+# IDEs y Sistema
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
