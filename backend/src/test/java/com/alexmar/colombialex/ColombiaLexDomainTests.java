@@ -176,10 +176,19 @@ class ColombiaLexDomainTests {
                     public java.util.Optional<com.alexmar.colombialex.geo.domain.model.MunicipalityEntity> findByDaneCode(String daneCode) {
                         return sampleList.stream().filter(m -> m.getDaneCode().equals(daneCode)).findFirst();
                     }
+
+                    @Override
+                    public java.util.List<com.alexmar.colombialex.geo.domain.model.MunicipalityEntity> searchByDepartmentAndTerm(String departmentCode, String term) {
+                        return sampleList.stream()
+                                .filter(m -> (departmentCode == null || departmentCode.isBlank() || m.getDepartmentCode().equals(departmentCode))
+                                        && (term == null || term.isBlank() || m.getMunicipalityName().contains(term.toUpperCase())))
+                                .toList();
+                    }
                 };
 
         var useCase = new com.alexmar.colombialex.geo.application.usecases.QueryDivipolaUseCase(fakePort);
         assertEquals(1, useCase.listDepartments().size());
         assertEquals("ZAPATOCA", useCase.findByDaneCode("68895").getMunicipalityName());
+        assertEquals(1, useCase.searchMunicipalities("68", "ZAPA").size());
     }
 }
