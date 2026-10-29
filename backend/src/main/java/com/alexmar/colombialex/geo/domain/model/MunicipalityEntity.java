@@ -5,7 +5,8 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "divipola_municipalities", indexes = {
         @Index(name = "idx_dane_code", columnList = "daneCode", unique = true),
-        @Index(name = "idx_dept_code", columnList = "departmentCode")
+        @Index(name = "idx_dept_code", columnList = "departmentCode"),
+        @Index(name = "idx_muni_name", columnList = "municipalityName")
 })
 public class MunicipalityEntity {
 

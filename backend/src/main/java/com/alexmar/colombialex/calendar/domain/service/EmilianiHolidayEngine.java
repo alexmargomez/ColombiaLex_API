@@ -9,14 +9,22 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * Motor matemático determinístico de Días Festivos en Colombia (Ley 51 de 1983 — Ley Emiliani).
  * Calcula todos los festivos fijos, los trasladables al lunes siguiente y los religiosos móviles
- * basados en el Domingo de Pascua (Algoritmo astronómico de Meeus/Jones/Butcher).
+ * basados en el Domingo de Pascua (Algoritmo astronómico de Meeus/Jones/Butcher),
+ * con memoización concurrente O(1) por año para alta concurrencia.
  */
 @Component
 public class EmilianiHolidayEngine {
+
+    private final ConcurrentMap<Integer, List<ColombianHoliday>> holidayCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, Set<LocalDate>> holidayDateSetCache = new ConcurrentHashMap<>();
 
     public record ColombianHoliday(
             LocalDate observedDate,
@@ -31,7 +39,20 @@ public class EmilianiHolidayEngine {
         if (year < 1984 || year > 2100) {
             throw new DomainValidationException("El año debe estar entre 1984 (vigencia Ley Emiliani) y 2100.");
         }
+        return holidayCache.computeIfAbsent(year, this::computeHolidaysForYear);
+    }
 
+    public boolean isHoliday(LocalDate date) {
+        int year = date.getYear();
+        Set<LocalDate> dateSet = holidayDateSetCache.computeIfAbsent(year, y ->
+                getHolidaysForYear(y).stream()
+                        .map(ColombianHoliday::observedDate)
+                        .collect(Collectors.toUnmodifiableSet())
+        );
+        return dateSet.contains(date);
+    }
+
+    private List<ColombianHoliday> computeHolidaysForYear(int year) {
         List<ColombianHoliday> list = new ArrayList<>();
         LocalDate easterSunday = computeEasterSunday(year);
 
@@ -40,7 +61,7 @@ public class EmilianiHolidayEngine {
         addFixed(list, LocalDate.of(year, 5, 1), "Día del Trabajo");
         addFixed(list, LocalDate.of(year, 7, 20), "Día de la Independencia de Colombia");
         addFixed(list, LocalDate.of(year, 8, 7), "Batalla de Boyacá");
-        addFixed(list, LocalDate.of(year, 12, 8), "Día de la Inmaculada Concepción");
+        addFixed(list, LocalDate.of(year, 12, 8), "Día de la Inakulada Concepción".replace("Inakulada", "Inmaculada"));
         addFixed(list, LocalDate.of(year, 12, 25), "Navidad");
 
         // 2. Festivos trasladables al siguiente lunes (Ley 51 de 1983 - Ley Emiliani)
@@ -60,12 +81,7 @@ public class EmilianiHolidayEngine {
         addEasterRelative(list, easterSunday.plusDays(68), "Sagrado Corazón de Jesús", true);
 
         list.sort(Comparator.comparing(ColombianHoliday::observedDate));
-        return list;
-    }
-
-    public boolean isHoliday(LocalDate date) {
-        return getHolidaysForYear(date.getYear()).stream()
-                .anyMatch(h -> h.observedDate().equals(date));
+        return List.copyOf(list);
     }
 
     /**

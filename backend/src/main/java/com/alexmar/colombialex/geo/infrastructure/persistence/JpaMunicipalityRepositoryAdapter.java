@@ -34,4 +34,12 @@ public class JpaMunicipalityRepositoryAdapter implements MunicipalityRepositoryP
     public Optional<MunicipalityEntity> findByDaneCode(String daneCode) {
         return jpaRepository.findByDaneCode(daneCode);
     }
+
+    @Override
+    public List<MunicipalityEntity> searchByDepartmentAndTerm(String departmentCode, String term) {
+        return jpaRepository.searchByDepartmentAndTerm(
+                departmentCode != null ? departmentCode.trim() : "",
+                term != null ? term.trim() : ""
+        );
+    }
 }

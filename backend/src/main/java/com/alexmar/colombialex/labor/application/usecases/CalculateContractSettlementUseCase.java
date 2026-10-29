@@ -123,13 +123,13 @@ public class CalculateContractSettlementUseCase {
         MoneyCOP vacationsBaseSalary = totalSalaryEarned;
 
         int totalDays = req.workedDaysTotal() != null && req.workedDaysTotal() > 0 ? req.workedDaysTotal() : 360;
-        int daysYear = req.workedDaysCurrentYear() != null && req.workedDaysCurrentYear() > 0
+        int daysYear = req.workedDaysCurrentYear() != null && req.workedDaysCurrentYear() >= 0
                 ? Math.min(360, req.workedDaysCurrentYear())
                 : Math.min(360, totalDays);
-        int daysSemester = req.workedDaysCurrentSemester() != null && req.workedDaysCurrentSemester() > 0
+        int daysSemester = req.workedDaysCurrentSemester() != null && req.workedDaysCurrentSemester() >= 0
                 ? Math.min(180, req.workedDaysCurrentSemester())
                 : Math.min(180, daysYear);
-        int daysForVacations = req.pendingVacationDaysAccounted() != null && req.pendingVacationDaysAccounted() > 0
+        int daysForVacations = req.pendingVacationDaysAccounted() != null && req.pendingVacationDaysAccounted() >= 0
                 ? req.pendingVacationDaysAccounted()
                 : totalDays;
 

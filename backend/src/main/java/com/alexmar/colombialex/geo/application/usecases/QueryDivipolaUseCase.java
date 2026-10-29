@@ -46,25 +46,7 @@ public class QueryDivipolaUseCase {
     }
 
     public List<MunicipalityEntity> searchMunicipalities(String departmentCode, String q) {
-        List<MunicipalityEntity> base = (departmentCode != null && !departmentCode.isBlank())
-                ? repository.findByDepartmentCodeOrderByMunicipalityNameAsc(departmentCode.trim())
-                : repository.findAll();
-
-        if (q == null || q.isBlank()) {
-            return base.stream()
-                    .sorted(Comparator.comparing(MunicipalityEntity::getDepartmentName)
-                            .thenComparing(MunicipalityEntity::getMunicipalityName))
-                    .toList();
-        }
-
-        String term = q.trim().toLowerCase();
-        return base.stream()
-                .filter(m -> m.getDaneCode().contains(term)
-                        || m.getMunicipalityName().toLowerCase().contains(term)
-                        || m.getDepartmentName().toLowerCase().contains(term)
-                        || m.getRegion().toLowerCase().contains(term))
-                .sorted(Comparator.comparing(MunicipalityEntity::getMunicipalityName))
-                .toList();
+        return repository.searchByDepartmentAndTerm(departmentCode, q);
     }
 
     public MunicipalityEntity findByDaneCode(String daneCode) {

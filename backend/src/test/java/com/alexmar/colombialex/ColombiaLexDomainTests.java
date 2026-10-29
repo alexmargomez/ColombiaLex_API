@@ -88,6 +88,15 @@ class ColombiaLexDomainTests {
         assertEquals(new BigDecimal("811750"), res.serviceBonusPrimaCOP());
         assertEquals(new BigDecimal("711750"), res.vacationsCompensatedCOP()); // Sin aux. transporte (1,423,500 / 2)
         assertEquals(new BigDecimal("50.00"), res.indemnification().compensatedDays());
+
+        // Caso borde: 0 días trabajados en el año actual (ya liquidado al 31 dic) -> Cesantías e Intereses = 0 COP
+        var zeroDaysYearReq = new CalculateContractSettlementUseCase.SettlementRequest(
+                2025, new BigDecimal("1423500"), BigDecimal.ZERO, 360, 0, 0, 0, "INDEFINIDO", false, 0, "I", true
+        );
+        var zeroRes = settlementUseCase.execute(zeroDaysYearReq);
+        assertEquals(BigDecimal.ZERO, zeroRes.severanceCesantiasCOP());
+        assertEquals(BigDecimal.ZERO, zeroRes.severanceInterests12PercentCOP());
+        assertEquals(BigDecimal.ZERO, zeroRes.serviceBonusPrimaCOP());
     }
 
     @Test
