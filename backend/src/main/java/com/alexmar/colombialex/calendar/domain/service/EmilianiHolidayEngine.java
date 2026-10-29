@@ -43,6 +43,9 @@ public class EmilianiHolidayEngine {
     }
 
     public boolean isHoliday(LocalDate date) {
+        if (date == null) {
+            return false;
+        }
         int year = date.getYear();
         Set<LocalDate> dateSet = holidayDateSetCache.computeIfAbsent(year, y ->
                 getHolidaysForYear(y).stream()
@@ -61,7 +64,7 @@ public class EmilianiHolidayEngine {
         addFixed(list, LocalDate.of(year, 5, 1), "Día del Trabajo");
         addFixed(list, LocalDate.of(year, 7, 20), "Día de la Independencia de Colombia");
         addFixed(list, LocalDate.of(year, 8, 7), "Batalla de Boyacá");
-        addFixed(list, LocalDate.of(year, 12, 8), "Día de la Inakulada Concepción".replace("Inakulada", "Inmaculada"));
+        addFixed(list, LocalDate.of(year, 12, 8), "Día de la Inmaculada Concepción");
         addFixed(list, LocalDate.of(year, 12, 25), "Navidad");
 
         // 2. Festivos trasladables al siguiente lunes (Ley 51 de 1983 - Ley Emiliani)

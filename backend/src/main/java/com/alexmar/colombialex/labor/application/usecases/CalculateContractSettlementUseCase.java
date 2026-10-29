@@ -122,21 +122,27 @@ public class CalculateContractSettlementUseCase {
         // Salario base para Vacaciones NO incluye auxilio de transporte (Art. 192 CST)
         MoneyCOP vacationsBaseSalary = totalSalaryEarned;
 
-        if (req.workedDaysCurrentYear() != null && (req.workedDaysCurrentYear() < 0 || req.workedDaysCurrentYear() > 360)) {
-            throw new DomainValidationException("Los días trabajados en el año contable deben estar entre 0 y 360.");
+        if (req.workedDaysTotal() != null && req.workedDaysTotal() <= 0) {
+            throw new DomainValidationException("El total de días trabajados debe ser mayor a 0.");
         }
-        if (req.workedDaysCurrentSemester() != null && (req.workedDaysCurrentSemester() < 0 || req.workedDaysCurrentSemester() > 180)) {
-            throw new DomainValidationException("Los días trabajados en el semestre deben estar entre 0 y 180.");
+        if (req.workedDaysCurrentYear() != null && req.workedDaysCurrentYear() < 0) {
+            throw new DomainValidationException("Los días trabajados en el año contable no pueden ser negativos.");
+        }
+        if (req.workedDaysCurrentSemester() != null && req.workedDaysCurrentSemester() < 0) {
+            throw new DomainValidationException("Los días trabajados en el semestre no pueden ser negativos.");
+        }
+        if (req.pendingVacationDaysAccounted() != null && req.pendingVacationDaysAccounted() < 0) {
+            throw new DomainValidationException("Los días pendientes de vacaciones no pueden ser negativos.");
         }
 
-        int totalDays = req.workedDaysTotal() != null && req.workedDaysTotal() > 0 ? req.workedDaysTotal() : 360;
+        int totalDays = req.workedDaysTotal() != null ? req.workedDaysTotal() : 360;
         int daysYear = req.workedDaysCurrentYear() != null
-                ? req.workedDaysCurrentYear()
+                ? Math.min(360, req.workedDaysCurrentYear())
                 : Math.min(360, totalDays);
         int daysSemester = req.workedDaysCurrentSemester() != null
-                ? req.workedDaysCurrentSemester()
+                ? Math.min(180, req.workedDaysCurrentSemester())
                 : Math.min(180, daysYear);
-        int daysForVacations = req.pendingVacationDaysAccounted() != null && req.pendingVacationDaysAccounted() >= 0
+        int daysForVacations = req.pendingVacationDaysAccounted() != null
                 ? req.pendingVacationDaysAccounted()
                 : totalDays;
 
