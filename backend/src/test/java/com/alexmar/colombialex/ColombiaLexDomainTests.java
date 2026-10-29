@@ -138,4 +138,39 @@ class ColombiaLexDomainTests {
         assertTrue(added.resultingDueDate().isAfter(LocalDate.of(2026, 1, 7)));
         assertFalse(added.holidaysEncountered().isEmpty());
     }
+
+    @Test
+    @DisplayName("Arquitectura Hexagonal DIVIPOLA: QueryDivipolaUseCase opera desacoplado de JPA mediante MunicipalityRepositoryPort")
+    void testDivipolaHexagonalPortIsolation() {
+        var sampleList = java.util.List.of(
+                new com.alexmar.colombialex.geo.domain.model.MunicipalityEntity(
+                        "68895", "68", "SANTANDER", "ZAPATOCA", "Sexta", "Andina", 6.8152, -73.2684, false
+                ),
+                new com.alexmar.colombialex.geo.domain.model.MunicipalityEntity(
+                        "68001", "68", "SANTANDER", "BUCARAMANGA", "Especial", "Andina", 7.1193, -73.1227, true
+                )
+        );
+
+        com.alexmar.colombialex.geo.domain.ports.MunicipalityRepositoryPort fakePort =
+                new com.alexmar.colombialex.geo.domain.ports.MunicipalityRepositoryPort() {
+                    @Override
+                    public java.util.List<com.alexmar.colombialex.geo.domain.model.MunicipalityEntity> findAll() {
+                        return sampleList;
+                    }
+
+                    @Override
+                    public java.util.List<com.alexmar.colombialex.geo.domain.model.MunicipalityEntity> findByDepartmentCodeOrderByMunicipalityNameAsc(String departmentCode) {
+                        return sampleList.stream().filter(m -> m.getDepartmentCode().equals(departmentCode)).toList();
+                    }
+
+                    @Override
+                    public java.util.Optional<com.alexmar.colombialex.geo.domain.model.MunicipalityEntity> findByDaneCode(String daneCode) {
+                        return sampleList.stream().filter(m -> m.getDaneCode().equals(daneCode)).findFirst();
+                    }
+                };
+
+        var useCase = new com.alexmar.colombialex.geo.application.usecases.QueryDivipolaUseCase(fakePort);
+        assertEquals(1, useCase.listDepartments().size());
+        assertEquals("ZAPATOCA", useCase.findByDaneCode("68895").getMunicipalityName());
+    }
 }

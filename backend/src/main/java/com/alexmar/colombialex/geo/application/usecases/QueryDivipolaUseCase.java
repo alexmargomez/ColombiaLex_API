@@ -1,7 +1,7 @@
 package com.alexmar.colombialex.geo.application.usecases;
 
 import com.alexmar.colombialex.geo.domain.model.MunicipalityEntity;
-import com.alexmar.colombialex.geo.infrastructure.persistence.MunicipalityJpaRepository;
+import com.alexmar.colombialex.geo.domain.ports.MunicipalityRepositoryPort;
 import com.alexmar.colombialex.shared.domain.exceptions.DomainValidationException;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +13,9 @@ import java.util.stream.Collectors;
 @Service
 public class QueryDivipolaUseCase {
 
-    private final MunicipalityJpaRepository repository;
+    private final MunicipalityRepositoryPort repository;
 
-    public QueryDivipolaUseCase(MunicipalityJpaRepository repository) {
+    public QueryDivipolaUseCase(MunicipalityRepositoryPort repository) {
         this.repository = repository;
     }
 
