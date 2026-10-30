@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.alexmar</groupId>
-    <artifactId>colombialex-api</artifactId>
+    <groupId>com.alcontable</groupId>
+    <artifactId>alcontable-api</artifactId>
     <version>1.0.0</version>
-    <name>ColombiaLex API</name>
-    <description>Motor Normativo Laboral (CST + Ley 2101), Tributario (DIAN Modulo 11, UVT, CIIU), Festivos (Ley Emiliani) y Territorial (DANE DIVIPOLA) en DDD + Arquitectura Hexagonal</description>
+    <name>ALcontable API</name>
+    <description>Suite Contable, Tributaria (DIAN Modulo 11, UVT, CIIU, Ley 2277), Laboral (CST + Ley 2101 + UGPP), Festivos (Ley Emiliani) y Territorial (DANE DIVIPOLA) en DDD + Arquitectura Hexagonal</description>
 
     <properties>
         <java.version>21</java.version>
@@ -58,7 +58,7 @@
     </dependencies>
 
     <build>
-        <finalName>colombialex-api-1.0.0</finalName>
+        <finalName>alcontable-api-1.0.0</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

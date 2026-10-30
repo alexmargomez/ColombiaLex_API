@@ -1,8 +1,8 @@
-# ⚖️ ColombiaLex API — Motor Legal, Laboral (CST / Ley 2101), Tributario (DIAN Módulo 11 / UVT), Festivos (Ley Emiliani) & DANE DIVIPOLA
+# ⚖️ ALcontable — Suite de Herramientas Contables, Tributarias (DIAN), Laborales (CST / Ley 2101 / UGPP), Festivos (Ley Emiliani) & DANE DIVIPOLA
 
-**ColombiaLex API** es una plataforma abierta para la comunidad y microservicio normativo construido en **Java 21 LTS + Spring Boot 3.3** bajo **DDD Táctico (*Domain-Driven Design*) y Arquitectura Hexagonal**, acompañado de un panel interactivo **SPA en Vue 3 + TypeScript + Vite** y persistencia en **MariaDB 11**.
+**ALcontable** es una plataforma abierta para la comunidad y estación de trabajo contable/tributaria construida en **Java 21 LTS + Spring Boot 3.3** bajo **DDD Táctico (*Domain-Driven Design*) y Arquitectura Hexagonal**, acompañada de un panel interactivo **SPA en Vue 3 + TypeScript + Vite** y persistencia en **MariaDB 11**.
 
-Centraliza en una sola API REST de alta precisión financiera (`BigDecimal` con `RoundingMode.HALF_UP`) los cálculos legales, laborales, tributarios y territoriales más utilizados por sistemas de nómina, ERPs, plataformas contables y comercios electrónicos en Colombia.
+Centraliza en una sola plataforma y API REST de alta precisión financiera (`BigDecimal` con `RoundingMode.HALF_UP`) los cálculos contables, laborales, tributarios y territoriales más utilizados por contadores públicos, estudios contables, sistemas de nómina y ERPs en Colombia.
 
 ![Java 21 LTS](https://img.shields.io/badge/Java-21_LTS_(Virtual_Threads)-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot 3.3](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F?logo=springboot&logoColor=white)
@@ -15,38 +15,38 @@ Centraliza en una sola API REST de alta precisión financiera (`BigDecimal` con 
 
 ---
 
-## 🚀 ¿Qué resuelve ColombiaLex API?
+## 🚀 ¿Qué resuelve la Estación de Trabajo ALcontable?
 
-1. **⏰ Calculadora de Horas Extra y Recargos con Reducción Gradual de Jornada (Ley 2101 de 2021 + CST Art. 168 y 179):**
-   - Selecciona automáticamente el divisor horario mensual exacto según la fecha de causación:
-     - Hasta 14 jul 2023: **48 h/semana** (`240 h/mes`)
-     - Desde 15 jul 2023: **47 h/semana** (`235 h/mes`)
-     - Desde 15 jul 2024: **46 h/semana** (`230 h/mes`)
-     - Desde 15 jul 2025: **44 h/semana** (`220 h/mes`)
-     - Desde 15 jul 2026: **42 h/semana** (`210 h/mes`)
-   - Desglosa al centavo **HED (`+25%`)**, **HEN (`+75%`)**, **Recargo Nocturno (`+35%`)**, **Dominical/Festivo Diurno (`+75%`)**, **Dominical/Festivo Nocturno (`+110%`)**, **Extra Dominical Diurna (`+100%`)** y **Extra Dominical Nocturna (`+150%`)**.
-2. **📑 Liquidador Integral de Contrato, Prestaciones Sociales, Seguridad Social e Indemnización (Art. 64 CST):**
-   - **Auxilio de Transporte** automático cuando el salario devengado es $\le 2 \text{ SMLMV}$.
-   - **Cesantías** ($\frac{\text{Salario Base} \times \text{Días}}{360}$), **Intereses sobre Cesantías** (`12%` anual), **Prima de Servicios** y **Vacaciones Compensadas** (calculadas sobre el salario básico sin auxilio de transporte, Art. 192 CST).
-   - **Seguridad Social y Parafiscales (PILA):** Salud (`4%` / `8.5%`), Pensión (`4%` / `12%`), **Fondo de Solidaridad Pensional (`FSP` `1%` a `2%`)**, **ARL por Clase de Riesgo (`I` a `V`)**, Caja de Compensación (`4%`), ICBF (`3%`), SENA (`2%`) y verificación automática de **Exoneración de Aportes Art. 114-1 E.T. ($< 10 \text{ SMLMV}$)**.
-   - **Indemnización por Despido sin Justa Causa (Art. 64 CST):** Estrategias diferenciadas para **Contrato Indefinido ($< 10$ SMLMV vs $\ge 10$ SMLMV)**, **Término Fijo** y **Obra o Labor**.
-3. **🧾 Motor Tributario DIAN (NIT Módulo 11, Conversor UVT/SMLMV, Retención en la Fuente y CIIU):**
-   - Cálculo y validación del **Dígito de Verificación (DV)** usando la secuencia oficial de 15 números primos de la DIAN (`[3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]`).
-   - Conversor histórico `UVT ↔ COP ↔ SMLMV` (`2020–2026`), calculadora de **Retención en la Fuente** por topes mínimos de UVT y buscador de actividades **CIIU Rev. 4 A.C.**
-4. **📅 Calendario de Festivos (Ley Emiliani — Ley 51 de 1983) y Calculadora de Días Hábiles:**
-   - Calcula matemáticamente el **Domingo de Pascua** (Algoritmo de Meeus/Jones/Butcher) y los **18 festivos nacionales** de cualquier año (`1984–2100`), incluyendo traslados al lunes y suma/conteo de **días hábiles** para términos legales o PQRSD.
-5. **🗺️ Catálogo Geográfico Oficial DANE / DIVIPOLA:**
-   - Consulta de Departamentos y Municipios de Colombia con código DANE de 2 y 5 dígitos, categoría Ley 617, subregión y coordenadas Lat/Lng.
+1. **🗂️ Módulo 1: Cartera de Clientes Contables, Radar de Vencimientos DIAN y Expediente Digital (Persistencia en MariaDB):**
+   - Gestión de empresas y personas naturales por **NIT + DV** y régimen tributario (`ORDINARIO_PJ`, `SIMPLE_RST`, `PERSONA_NATURAL`, `ESAL`).
+   - Generación automática de **Calendario Tributario DIAN** según últimos dígitos del NIT y **Radar de Obligaciones** (`PRESENTADO`, `PROXIMO_A_VENCER`, `VENCIDO_CON_SANCION`) con conexión de 1 clic hacia el Liquidador Forense de Sanciones.
+   - **Expediente Digital de Papeles de Trabajo (`alcontable_saved_workpapers`)** persistido en MariaDB para conservar cada corrida de nómina, pre-auditoría de exógena, planeación o liquidación de sanciones.
+2. **👥 Módulo 2: Auditor Masivo de Nómina Mensual en Lote, Tope 40% UGPP (Ley 1393 Art. 30) y Comprobante Contable PUC:**
+   - Procesamiento simultáneo en lote de plantillas de empleados (`Copy/Paste` desde Excel o CSV).
+   - **Auditoría Preventiva UGPP (Ley 1393 de 2010 Art. 30):** Detecta automáticamente pagos no constitutivos de salario que superan el **40% del total de la remuneración** y recalcula el **IBC de Seguridad Social** sumando el exceso.
+   - Liquidación automática de **PILA** (Salud, Pensión, FSP escalonado, ARL I–V, Parafiscales con **Exoneración Art. 114-1 E.T.** y Provisiones de Prestaciones Sociales).
+   - **Generador de Comprobante de Contabilización PUC a 6 dígitos (`5105xx` / `2370xx` / `2380xx` / `2505xx` / `2610xx`)** cuadrado al centavo ($\sum \text{Débitos} = \sum \text{Créditos}$) listo para importar en Siigo / World Office / Alegra.
+3. **🔍 Módulo 3: Pre-Auditor Masivo de Exógena DIAN (Formatos 1001 y 1007), Limpiador NIT/DV y Homologador DANE:**
+   - Limpieza en lote de NITs sucios con guiones, puntos o espacios y verificación matemática contra **Módulo 11 DIAN** (detectando discrepancias entre el DV del ERP y el DV real).
+   - Homologación automática de nombres de ciudades con tildes o errores de digitación contra el catálogo oficial **DANE DIVIPOLA** (código de departamento de 2 dígitos y municipio de 5 dígitos).
+   - **Auditoría de Insuficiencia de Retención en la Fuente (Art. 177 y 370 E.T.):** Cruza pagos acumulados por tercero y concepto (`HONORARIOS`, `COMISIONES`, `SERVICIOS_GENERALES`, `COMPRAS_GENERALES`, `ARRENDAMIENTOS_MUEBLES`, `ARRENDAMIENTOS_INMUEBLES`), alerta bases superiores al tope en UVT sin retención practicada y proyecta los renglones del **Formulario 350** redondeados al múltiplo de mil.
+4. **📊 Módulo 4: Estudio de Planeación Tributaria Ley 2277 (Art. 383/388 E.T.) y Comparador Régimen Ordinario vs SIMPLE (RST):**
+   - **Depurador de Retención en la Fuente Rentas de Trabajo (Art. 383 y 388 E.T.):** Deducciones (vivienda, medicina prepagada, dependientes 10% + 72 UVT Ley 2277), renta exenta 25% limitada a **790 UVT anuales** y límite global del **40% o 1.340 UVT anuales**.
+   - **Comparador Estratégico Lado a Lado:** Simula con cifras reales del cliente el impuesto neto bajo **Régimen Ordinario (35%)** frente al **Régimen Simple de Tributación — RST (Art. 908 E.T. Grupos 1 al 4)** considerando el impacto del impuesto sobre ingresos brutos, exoneración de aportes y descuentos de pensión y facturación electrónica.
+5. **⚖️ Módulo 5: Liquidador Forense de Sanciones DIAN (Art. 641/642/644 + Gradualidad Art. 640) y Tasador Ley 2101:**
+   - Cálculo exacto de **Sanción por Extemporaneidad (Art. 641 y 642 E.T.)** y **Sanción por Corrección (Art. 644 E.T.)** por mes o fracción de mes, o sobre ingresos brutos / patrimonio cuando no hay impuesto a cargo.
+   - Aplicación automática del **Régimen de Gradualidad (Art. 640 E.T. — reducción al 50% o 75%)**, **Sanción Mínima de 10 UVT (Art. 639 E.T.)**, redondeo al múltiplo de mil (**Art. 868 E.T.**), **Intereses Moratorios (Art. 634/635 E.T.)** y borrador de casillas del **Recibo Oficial de Pago Formulario 490 (Casillas 41, 42, 43 y 48)**.
+   - Incluye **Tasador de Horas Extra y Recargos con Reducción Gradual de Jornada (Ley 2101 de 2021: 240h → 235h → 230h → 220h → 210h)**.
 
 ---
 
 ## 🏛️ Arquitectura y Patrones de Diseño (GoF & DDD)
 
-- **DDD Táctico (*Bounded Contexts*):** `labor`, `tax`, `calendar` y `geo`.
+- **DDD Táctico (*Bounded Contexts* en `com.alcontable`):** `portfolio`, `payroll`, `exogena`, `taxplanning`, `sanctions` y `shared`.
 - **Patrones de Diseño Aplicados:**
   - **`Value Object Pattern` (`MoneyCOP`, `NitVO`):** Inmutabilidad, validación en construcción y aritmética exacta con `BigDecimal`.
   - **`Strategy Pattern` (`Law2101WorkingHoursStrategy`, `SeveranceIndemnificationStrategy`):** Selección dinámica de reglas según vigencia de ley o modalidad contractual.
-  - **`Specification Pattern` (`LaborSpecifications`):** Reglas booleanas declarativas para elegibilidad de auxilio de transporte, tramos de FSP y exoneración Art. 114-1 E.T.
+  - **`Specification Pattern` (`LaborSpecifications`):** Reglas booleanas declarativas para elegibilidad de auxilio de transporte, tramos de FSP, tope 40% UGPP y exoneración Art. 114-1 E.T.
 
 ---
 

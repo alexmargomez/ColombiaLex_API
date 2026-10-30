@@ -1,0 +1,59 @@
+package com.alcontable.exogena.application.usecases;
+
+import com.alcontable.exogena.domain.model.MunicipalityEntity;
+import com.alcontable.exogena.domain.ports.MunicipalityRepositoryPort;
+import com.alcontable.shared.domain.exceptions.DomainValidationException;
+import org.springframework.stereotype.Service;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class QueryDivipolaUseCase {
+
+    private final MunicipalityRepositoryPort repository;
+
+    public QueryDivipolaUseCase(MunicipalityRepositoryPort repository) {
+        this.repository = repository;
+    }
+
+    public record DepartmentSummary(
+            String departmentCode,
+            String departmentName,
+            String region,
+            long municipalitiesRegisteredCount
+    ) {}
+
+    public List<DepartmentSummary> listDepartments() {
+        List<MunicipalityEntity> all = repository.findAll();
+        Map<String, List<MunicipalityEntity>> grouped = all.stream()
+                .collect(Collectors.groupingBy(MunicipalityEntity::getDepartmentCode));
+
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    MunicipalityEntity first = entry.getValue().get(0);
+                    return new DepartmentSummary(
+                            entry.getKey(),
+                            first.getDepartmentName(),
+                            first.getRegion(),
+                            entry.getValue().size()
+                    );
+                })
+                .sorted(Comparator.comparing(DepartmentSummary::departmentName))
+                .toList();
+    }
+
+    public List<MunicipalityEntity> searchMunicipalities(String departmentCode, String q) {
+        return repository.searchByDepartmentAndTerm(departmentCode, q);
+    }
+
+    public MunicipalityEntity findByDaneCode(String daneCode) {
+        if (daneCode == null || daneCode.isBlank()) {
+            throw new DomainValidationException("Debe proporcionar un código DANE válido de 5 dígitos.");
+        }
+        return repository.findByDaneCode(daneCode.trim())
+                .orElseThrow(() -> new DomainValidationException("NOT_FOUND", "No se encontró el municipio con código DANE: " + daneCode));
+    }
+}
