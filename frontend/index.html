@@ -1,16 +1,50 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ALcontable — Suite Contable, Tributaria DIAN, Laboral UGPP, Festivos & DIVIPOLA</title>
+    <title>ALcontable — Estación de Trabajo Contable, Tributaria DIAN &amp; Auditoría UGPP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              dian: {
+                50: '#ECFDF5',
+                100: '#D1FAE5',
+                700: '#055438',
+                800: '#004830',
+              },
+            },
+          },
+        },
+      };
+    </script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
+    <style>
+      body {
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+      }
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500/30">
+  <body class="bg-slate-100 text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900 font-sans">
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

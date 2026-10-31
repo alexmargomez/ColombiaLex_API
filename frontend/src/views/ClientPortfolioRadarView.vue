@@ -66,12 +66,12 @@ async function createNewClient() {
       method: 'POST',
       body: JSON.stringify(newClient),
     });
-    feedbackMsg.value = `Cliente ${created.businessName} (${created.formattedNit}) creado con calendario tributario automático en MariaDB.`;
+    feedbackMsg.value = `Cliente ${created.businessName} (${created.formattedNit}) registrado con calendario tributario en días hábiles en MariaDB.`;
     showNewClientForm.value = false;
     newClient.nit = '';
     newClient.businessName = '';
     await loadDashboard();
-    emit('selectClient', created);
+    emit('client-created', created);
   } catch (e: any) {
     errorMsg.value = e.message;
   }
@@ -167,163 +167,216 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- KPIs de Cabecera de Cartera -->
+    <!-- KPIs Ejecutivos de Cabecera de Cartera -->
     <div v-if="dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <div class="text-xs text-slate-400">Clientes Activos en Cartera (MariaDB)</div>
-        <div class="text-2xl font-black text-white font-mono mt-1">{{ dashboard.totalActiveClients }}</div>
-        <div class="text-[11px] text-indigo-400 mt-1">
-          {{ dashboard.totalObligationsCount }} declaraciones monitorizadas
+      <div class="bg-white border border-slate-200 border-l-4 border-l-blue-700 rounded-xl p-4 shadow-xs">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Clientes Activos en Cartera</div>
+        <div class="text-2xl font-extrabold text-slate-900 font-mono tabular-nums mt-1">
+          {{ dashboard.totalActiveClients }}
+        </div>
+        <div class="text-[11px] text-slate-600 mt-1">
+          {{ dashboard.totalObligationsCount }} declaraciones monitorizadas en MariaDB
         </div>
       </div>
 
-      <div class="bg-slate-900 border border-rose-500/40 rounded-2xl p-4">
-        <div class="text-xs text-rose-300 font-semibold">Obligaciones Vencidas / En Mora</div>
-        <div class="text-2xl font-black text-rose-400 font-mono mt-1">
+      <div class="bg-white border border-slate-200 border-l-4 border-l-red-600 rounded-xl p-4 shadow-xs">
+        <div class="text-xs font-semibold text-red-700 uppercase tracking-wider">Obligaciones Vencidas / Mora</div>
+        <div class="text-2xl font-extrabold text-red-700 font-mono tabular-nums mt-1">
           {{ dashboard.overdueObligationsCount }}
         </div>
-        <div class="text-[11px] text-rose-300/80 font-mono mt-1">
-          Riesgo Sanción: {{ formatCOP(dashboard.totalEstimatedSanctionRiskCop) }}
+        <div class="text-[11px] text-red-700 font-mono tabular-nums font-medium mt-1">
+          Contingencia Sanción: {{ formatCOP(dashboard.totalEstimatedSanctionRiskCop) }}
         </div>
       </div>
 
-      <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-4">
-        <div class="text-xs text-amber-300 font-semibold">Vencen en los Próximos 7 Días</div>
-        <div class="text-2xl font-black text-amber-400 font-mono mt-1">
+      <div class="bg-white border border-slate-200 border-l-4 border-l-amber-600 rounded-xl p-4 shadow-xs">
+        <div class="text-xs font-semibold text-amber-800 uppercase tracking-wider">Vencen en Próximos 7 Días</div>
+        <div class="text-2xl font-extrabold text-amber-700 font-mono tabular-nums mt-1">
           {{ dashboard.upcoming7DaysCount }}
         </div>
-        <div class="text-[11px] text-slate-400 mt-1">Control automático por último dígito del NIT</div>
+        <div class="text-[11px] text-slate-600 mt-1">Control en días hábiles por último dígito NIT</div>
       </div>
 
-      <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-4">
-        <div class="text-xs text-emerald-300 font-semibold">Cumplimiento de Cartera</div>
-        <div class="text-2xl font-black text-emerald-400 font-mono mt-1">
+      <div class="bg-white border border-slate-200 border-l-4 border-l-emerald-600 rounded-xl p-4 shadow-xs">
+        <div class="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Cumplimiento de Cartera</div>
+        <div class="text-2xl font-extrabold text-emerald-700 font-mono tabular-nums mt-1">
           {{ dashboard.complianceRatePercent }}%
         </div>
-        <div class="text-[11px] text-slate-400 mt-1">
-          {{ dashboard.presentedObligationsCount }} declaraciones presentadas al día
+        <div class="text-[11px] text-slate-600 mt-1">
+          {{ dashboard.presentedObligationsCount }} declaraciones presentadas oportunamente
         </div>
       </div>
     </div>
 
-    <div v-if="feedbackMsg" class="bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs rounded-xl p-3 flex items-center justify-between">
-      <span><i class="fa-solid fa-circle-check mr-1.5"></i>{{ feedbackMsg }}</span>
-      <button @click="feedbackMsg = ''" class="text-slate-400 hover:text-white">✕</button>
+    <!-- Alertas y Confirmaciones -->
+    <div
+      v-if="feedbackMsg"
+      class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg p-3 flex items-center justify-between shadow-2xs"
+    >
+      <span class="font-medium"><i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i>{{ feedbackMsg }}</span>
+      <button @click="feedbackMsg = ''" class="text-emerald-700 hover:text-emerald-950 font-bold">✕</button>
     </div>
 
-    <div v-if="errorMsg" class="bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs rounded-xl p-3">
-      {{ errorMsg }}
+    <div v-if="errorMsg" class="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 font-medium">
+      <i class="fa-solid fa-triangle-exclamation text-red-600 mr-1.5"></i>{{ errorMsg }}
     </div>
 
-    <!-- Sección 1: Cartera de Clientes y Nuevo Cliente -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+    <!-- Sección 1: Cartera de Clientes del Estudio Contable -->
+    <div class="bg-white border border-slate-200 border-t-4 border-t-blue-700 rounded-xl p-5 shadow-xs space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-building-shield text-amber-400"></i>
-            Cartera de Clientes del Estudio Contable (NITs con DV Módulo 11)
-          </h3>
-          <p class="text-xs text-slate-400">
-            Selecciona un cliente para fijarlo como contexto activo en Nómina/UGPP, Exógena, Planeación Ley 2277 y Sanciones.
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono text-[10px] font-bold">
+              PT-01A
+            </span>
+            <h3 class="text-base font-bold text-slate-900">
+              Directorio de Contribuyentes y Empresas en Cartera (Verificación Módulo 11 DIAN)
+            </h3>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Selecciona una empresa para fijar su expediente como contexto activo en Nómina/UGPP, Exógena, Planeación Ley 2277 y Sanciones.
           </p>
         </div>
         <button
           @click="showNewClientForm = !showNewClientForm"
-          class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+          class="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-2xs"
         >
-          <i class="fa-solid fa-plus mr-1.5"></i>{{ showNewClientForm ? 'Cerrar Formulario' : 'Agregar Cliente a Cartera' }}
+          <i class="fa-solid fa-plus mr-1.5"></i>{{ showNewClientForm ? 'Cerrar Registro' : 'Registrar Nuevo Cliente' }}
         </button>
       </div>
 
-      <!-- Formulario Nuevo Cliente -->
-      <div v-if="showNewClientForm" class="bg-slate-950 border border-amber-500/30 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <!-- Formulario de Alta de Cliente -->
+      <div
+        v-if="showNewClientForm"
+        class="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs"
+      >
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">NIT o Cédula (DV se calcula solo)</label>
-          <input v-model="newClient.nit" type="text" placeholder="Ej: 901555432" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          <label class="block text-slate-700 font-semibold mb-1">NIT o Cédula (DV automático)</label>
+          <input
+            v-model="newClient.nit"
+            type="text"
+            placeholder="Ej: 901555432"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-blue-600"
+          />
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Razón Social / Nombre Cliente</label>
-          <input v-model="newClient.businessName" type="text" placeholder="Ej: Distribuidora El Cóndor S.A.S." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <label class="block text-slate-700 font-semibold mb-1">Razón Social / Nombre Completo</label>
+          <input
+            v-model="newClient.businessName"
+            type="text"
+            placeholder="Ej: Distribuidora El Cóndor S.A.S."
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
+          />
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Régimen Tributario</label>
-          <select v-model="newClient.taxRegime" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-700 font-semibold mb-1">Régimen Tributario</label>
+          <select
+            v-model="newClient.taxRegime"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
+          >
             <option value="ORDINARIO">Régimen Ordinario (35%)</option>
             <option value="SIMPLE_RST">Régimen Simple (RST)</option>
             <option value="PERSONA_NATURAL">Persona Natural (Cédula General)</option>
           </select>
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Periodicidad IVA</label>
-          <select v-model="newClient.ivaPeriodicity" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white">
+          <label class="block text-slate-700 font-semibold mb-1">Periodicidad IVA</label>
+          <select
+            v-model="newClient.ivaPeriodicity"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
+          >
             <option value="BIMESTRAL">Bimestral (Formulario 300)</option>
             <option value="CUATRIMESTRAL">Cuatrimestral (Formulario 300)</option>
             <option value="NO_RESPONSABLE">No Responsable de IVA</option>
           </select>
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Ingresos Brutos Anuales Est. (COP)</label>
-          <input v-model.number="newClient.estimatedAnnualIncomeCop" type="number" step="50000000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          <label class="block text-slate-700 font-semibold mb-1">Ingresos Brutos Anuales Est. (COP)</label>
+          <input
+            v-model.number="newClient.estimatedAnnualIncomeCop"
+            type="number"
+            step="50000000"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-mono tabular-nums text-right focus:outline-none focus:border-blue-600"
+          />
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Número de Empleados</label>
-          <input v-model.number="newClient.employeesCount" type="number" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+          <label class="block text-slate-700 font-semibold mb-1">Número de Empleados</label>
+          <input
+            v-model.number="newClient.employeesCount"
+            type="number"
+            min="0"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-mono tabular-nums text-right focus:outline-none focus:border-blue-600"
+          />
         </div>
         <div>
-          <label class="block text-slate-300 font-semibold mb-1">Ciudad / Municipio DANE</label>
-          <input v-model="newClient.municipalityName" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <label class="block text-slate-700 font-semibold mb-1">Ciudad / Municipio DANE</label>
+          <input
+            v-model="newClient.municipalityName"
+            type="text"
+            class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
+          />
         </div>
         <div class="flex items-end">
-          <button @click="createNewClient" class="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition">
-            Guardar Cliente y Generar Calendario
+          <button
+            @click="createNewClient"
+            class="w-full py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold transition shadow-2xs"
+          >
+            <i class="fa-solid fa-floppy-disk mr-1.5"></i>Guardar y Generar Calendario
           </button>
         </div>
       </div>
 
-      <!-- Tarjetas Compactas de Clientes -->
+      <!-- Tarjetas de Empresas en Cartera -->
       <div v-if="dashboard?.clients" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
         <div
           v-for="c in dashboard.clients"
           :key="c.id"
           @click="emit('selectClient', c)"
-          class="cursor-pointer rounded-xl p-3.5 border transition flex flex-col justify-between gap-2"
+          class="cursor-pointer rounded-xl p-4 border transition flex flex-col justify-between gap-2.5"
           :class="
             activeClientId === c.id
-              ? 'bg-amber-500/10 border-amber-500/50'
-              : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+              ? 'bg-blue-50/60 border-blue-600 ring-2 ring-blue-100'
+              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70'
           "
         >
           <div class="flex items-start justify-between gap-2">
             <div>
-              <div class="font-bold text-white text-sm">{{ c.businessName }}</div>
-              <div class="font-mono text-amber-300 text-xs mt-0.5">
-                NIT {{ c.formattedNit }}
-                <span class="text-slate-400">• Último dígito: </span>
-                <strong class="text-white">{{ c.lastNitDigit }}</strong>
+              <div class="font-bold text-slate-900 text-sm">{{ c.businessName }}</div>
+              <div class="font-mono text-slate-700 text-xs mt-0.5">
+                NIT <strong class="text-blue-800">{{ c.formattedNit }}</strong>
+                <span class="text-slate-400 mx-1">•</span>
+                <span class="text-slate-600">Últ. dígito: </span>
+                <strong class="text-slate-900">{{ c.lastNitDigit }}</strong>
               </div>
             </div>
-            <span class="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[10px] font-bold">
+            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[10px] font-bold">
               {{ c.taxRegime }}
             </span>
           </div>
-          <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
-            <span>{{ c.municipalityName }} ({{ c.municipalityDaneCode }})</span>
-            <span class="font-mono text-emerald-400">{{ c.employeesCount }} emp • {{ formatCOP(c.estimatedAnnualIncomeCop) }}/año</span>
+          <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-600 border-t border-slate-200/80 pt-2">
+            <span><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>{{ c.municipalityName }} ({{ c.municipalityDaneCode }})</span>
+            <span class="font-mono tabular-nums font-semibold text-slate-800">
+              {{ c.employeesCount }} emp • {{ formatCOP(c.estimatedAnnualIncomeCop) }}/año
+            </span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Sección 2: Radar Maestro de Obligaciones Tributarias -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-satellite-dish text-rose-400"></i>
-            Radar de Vencimientos Tributarios DIAN y Semáforo de Mora por NIT
-          </h3>
-          <p class="text-xs text-slate-400">
-            Haz clic en <strong class="text-rose-300">Liquidar Sanción (1 Clic)</strong> en cualquier obligación vencida para abrir el Liquidador Forense con sus datos exactos.
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono text-[10px] font-bold">
+              PT-01B
+            </span>
+            <h3 class="text-base font-bold text-slate-900">
+              Libro Auxiliar de Vencimientos Tributarios DIAN y Estado de Cumplimiento por NIT
+            </h3>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">
+            En cualquier declaración vencida, usa <strong class="text-red-700">Liquidar Sanción (1 Clic)</strong> para enviar sus datos al Liquidador Forense Art. 640 y Formulario 490.
           </p>
         </div>
 
@@ -331,135 +384,154 @@ onMounted(() => {
           <input
             v-model="searchTerm"
             type="text"
-            placeholder="Filtrar por NIT, cliente o impuesto..."
-            class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white"
+            placeholder="Filtrar NIT, empresa o formulario..."
+            class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-blue-600"
           />
           <button
             @click="filterUrgency = 'ALL'"
-            class="px-3 py-1.5 rounded-xl font-semibold"
-            :class="filterUrgency === 'ALL' ? 'bg-white text-slate-950' : 'bg-slate-800 text-slate-300'"
+            class="px-3 py-1.5 rounded-lg font-semibold border transition"
+            :class="
+              filterUrgency === 'ALL'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            "
           >
             Todas
           </button>
           <button
             @click="filterUrgency = 'CRITICA_MORA'"
-            class="px-3 py-1.5 rounded-xl font-semibold"
-            :class="filterUrgency === 'CRITICA_MORA' ? 'bg-rose-500 text-white' : 'bg-slate-800 text-rose-300'"
+            class="px-3 py-1.5 rounded-lg font-semibold border transition"
+            :class="
+              filterUrgency === 'CRITICA_MORA'
+                ? 'bg-red-700 text-white border-red-700'
+                : 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100'
+            "
           >
             En Mora
           </button>
           <button
             @click="filterUrgency = 'PROXIMA_7_DIAS'"
-            class="px-3 py-1.5 rounded-xl font-semibold"
-            :class="filterUrgency === 'PROXIMA_7_DIAS' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-300'"
+            class="px-3 py-1.5 rounded-lg font-semibold border transition"
+            :class="
+              filterUrgency === 'PROXIMA_7_DIAS'
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+            "
           >
             Próximas 7d
           </button>
           <button
             @click="copyObligationsTsv"
-            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-semibold"
+            class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold transition"
           >
-            <i class="fa-solid fa-copy mr-1"></i>Copiar Excel
+            <i class="fa-solid fa-table text-emerald-700 mr-1"></i>Copiar Excel
           </button>
           <button
             @click="exportObligationsCsv"
-            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold"
+            class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition"
           >
             <i class="fa-solid fa-file-csv mr-1"></i>Exportar CSV
           </button>
         </div>
       </div>
 
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto border border-slate-200 rounded-lg">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
-            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <tr class="bg-slate-100 border-b-2 border-slate-300 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
               <th class="py-2.5 px-3">NIT (Últ. Dígito)</th>
-              <th class="py-2.5 px-3">Cliente / Régimen</th>
-              <th class="py-2.5 px-3">Declaración / Form.</th>
+              <th class="py-2.5 px-3">Contribuyente / Régimen</th>
+              <th class="py-2.5 px-3">Declaración / Formulario</th>
               <th class="py-2.5 px-3">Periodo</th>
-              <th class="py-2.5 px-3">Vencimiento</th>
-              <th class="py-2.5 px-3 text-right">Impuesto Est.</th>
+              <th class="py-2.5 px-3">Fecha Vencimiento</th>
+              <th class="py-2.5 px-3 text-right">Impuesto Estimado</th>
               <th class="py-2.5 px-3 text-center">Estado</th>
-              <th class="py-2.5 px-3 text-right">Acciones Rápidas</th>
+              <th class="py-2.5 px-3 text-right">Acción Contable</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-800/70">
-            <tr v-for="ob in filteredObligations" :key="ob.id" class="hover:bg-slate-950/60">
-              <td class="py-2.5 px-3 font-mono text-white">
+          <tbody class="divide-y divide-slate-200 bg-white">
+            <tr
+              v-for="ob in filteredObligations"
+              :key="ob.id"
+              class="even:bg-slate-50/60 hover:bg-blue-50/40 transition-colors"
+              :class="ob.status === 'VENCIDA' ? 'bg-red-50/30' : ''"
+            >
+              <td class="py-2.5 px-3 font-mono text-slate-900 font-semibold whitespace-nowrap">
                 {{ ob.clientFormattedNit }}
-                <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold text-[10px]">
+                <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300 font-bold text-[10px]">
                   #{{ ob.lastNitDigit }}
                 </span>
               </td>
               <td class="py-2.5 px-3">
-                <div class="font-semibold text-white">{{ ob.clientBusinessName }}</div>
-                <div class="text-[10px] text-slate-400">{{ ob.clientTaxRegime }}</div>
+                <div class="font-bold text-slate-900">{{ ob.clientBusinessName }}</div>
+                <div class="text-[10px] text-slate-500 font-medium">{{ ob.clientTaxRegime }}</div>
               </td>
               <td class="py-2.5 px-3 font-mono">
-                <span class="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 font-bold mr-1">
+                <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[10px] mr-1.5">
                   F-{{ ob.formCode }}
                 </span>
-                <span class="text-slate-200">{{ ob.declarationType }}</span>
+                <span class="text-slate-800 font-sans font-medium">{{ ob.declarationType }}</span>
               </td>
-              <td class="py-2.5 px-3 font-mono text-slate-300">{{ ob.taxPeriod }}</td>
-              <td class="py-2.5 px-3 font-mono">
-                <div class="text-white">{{ ob.dueDate }}</div>
+              <td class="py-2.5 px-3 font-mono text-slate-700">{{ ob.taxPeriod }}</td>
+              <td class="py-2.5 px-3 font-mono whitespace-nowrap">
+                <div class="text-slate-900 font-semibold">{{ ob.dueDate }}</div>
                 <div
-                  class="text-[10px]"
+                  class="text-[10px] font-sans"
                   :class="
-                    ob.daysUntilOrOverdue < 0
-                      ? 'text-rose-400 font-bold'
-                      : ob.daysUntilOrOverdue <= 7
-                        ? 'text-amber-300'
-                        : 'text-slate-400'
+                    ob.status === 'PRESENTADA'
+                      ? 'text-emerald-700 font-medium'
+                      : ob.daysUntilOrOverdue < 0
+                        ? 'text-red-700 font-bold'
+                        : ob.daysUntilOrOverdue <= 7
+                          ? 'text-amber-700 font-semibold'
+                          : 'text-slate-500'
                   "
                 >
                   {{
                     ob.status === 'PRESENTADA'
-                      ? 'Presentada a tiempo'
+                      ? 'Presentada oportunamente'
                       : ob.daysUntilOrOverdue < 0
                         ? `${Math.abs(ob.daysUntilOrOverdue)} días en mora`
                         : `Vence en ${ob.daysUntilOrOverdue} días`
                   }}
                 </div>
               </td>
-              <td class="py-2.5 px-3 text-right font-mono text-white">
+              <td class="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-slate-900 whitespace-nowrap">
                 {{ formatCOP(ob.estimatedTaxCop) }}
               </td>
-              <td class="py-2.5 px-3 text-center">
+              <td class="py-2.5 px-3 text-center whitespace-nowrap">
                 <span
-                  class="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
                   :class="
                     ob.status === 'PRESENTADA'
-                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       : ob.status === 'VENCIDA'
-                        ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
-                        : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                        ? 'bg-red-50 text-red-800 border-red-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
                   "
                 >
                   {{ ob.status }}
                 </span>
               </td>
-              <td class="py-2.5 px-3 text-right space-x-1.5">
+              <td class="py-2.5 px-3 text-right space-x-1.5 whitespace-nowrap">
                 <button
                   v-if="ob.status === 'VENCIDA'"
                   @click="emit('liquidateObligationSanction', ob)"
-                  class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition"
+                  class="px-2.5 py-1 rounded-md bg-red-700 hover:bg-red-800 text-white font-semibold text-[11px] transition shadow-2xs"
                 >
                   <i class="fa-solid fa-gavel mr-1"></i>Liquidar Sanción (1 Clic)
                 </button>
                 <button
                   v-if="ob.status !== 'PRESENTADA'"
                   @click="changeObligationStatus(ob.id, 'PRESENTADA')"
-                  class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-[11px] transition"
+                  class="px-2.5 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-[11px] transition"
                 >
                   Marcar Presentada
                 </button>
                 <button
                   v-else
                   @click="changeObligationStatus(ob.id, 'PENDIENTE')"
-                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition"
+                  class="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] transition"
                 >
                   Reabrir
                 </button>
@@ -472,70 +544,85 @@ onMounted(() => {
 
     <!-- Sección 3: Expediente Digital de Papeles de Trabajo Guardados en MariaDB y Calculadora de Términos -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-folder-tree text-cyan-400"></i>
-          Expediente Digital de Papeles de Trabajo Guardados en MariaDB
-        </h3>
-        <p class="text-xs text-slate-400">
-          Historial auditable de liquidaciones de nómina/UGPP, pre-auditorías de Exógena, estudios Ley 2277 y sanciones guardadas por cliente.
-        </p>
+      <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
+        <div class="border-b border-slate-100 pb-2.5">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-blue-700"></i>
+            Expediente Digital de Papeles de Trabajo Guardados en MariaDB (NIA 230)
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Trazabilidad auditable de liquidaciones de nómina/UGPP, pre-auditorías de Exógena, estudios Ley 2277 y sanciones por cliente.
+          </p>
+        </div>
 
         <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
           <div
             v-for="wp in dashboard?.recentWorkpapers || []"
             :key="wp.id"
-            class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs space-y-1.5"
+            class="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs space-y-1.5"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="font-bold text-white">{{ wp.title }}</div>
-              <span class="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-mono text-[10px] font-bold">
+              <div class="font-bold text-slate-900">{{ wp.title }}</div>
+              <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono text-[10px] font-bold">
                 {{ wp.workpaperType }} • {{ wp.taxPeriod }}
               </span>
             </div>
-            <div class="text-[11px] text-amber-300 font-mono">
+            <div class="text-[11px] text-slate-700 font-mono font-semibold">
               Cliente: {{ wp.clientBusinessName }} (NIT {{ wp.clientFormattedNit }})
             </div>
-            <p class="text-slate-300 text-[11px]">{{ wp.executiveSummary }}</p>
-            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-900">
+            <p class="text-slate-600 text-[11px]">{{ wp.executiveSummary }}</p>
+            <div class="flex items-center justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-200">
               <span>Impacto / Hallazgo Cuantificado:</span>
-              <span class="font-mono font-bold text-emerald-400">{{ formatCOP(wp.detectedSavingsOrRiskCop) }}</span>
+              <span class="font-mono tabular-nums font-bold text-slate-900">{{ formatCOP(wp.detectedSavingsOrRiskCop) }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-calendar-check text-emerald-400"></i>
-            Calculadora de Plazos para Responder Requerimientos DIAN / UGPP (Días Hábiles Ley Emiliani)
+      <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+        <div class="border-b border-slate-100 pb-2.5">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-blue-700"></i>
+            Términos Procesales para Responder Requerimientos DIAN / UGPP (Ley Emiliani)
           </h3>
-          <p class="text-xs text-slate-400 mt-1">
-            Calcula la fecha exacta límite descontando domingos y los 18 festivos oficiales de Colombia.
+          <p class="text-xs text-slate-500 mt-0.5">
+            Determina la fecha exacta de vencimiento en días hábiles descontando domingos y los 18 festivos nacionales.
           </p>
         </div>
 
         <div class="grid grid-cols-2 gap-3 text-xs">
           <div>
-            <label class="block text-slate-300 font-semibold mb-1">Fecha Notificación Acto DIAN</label>
-            <input v-model="bdaysForm.startDate" type="date" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+            <label class="block text-slate-700 font-semibold mb-1">Fecha Notificación Acto DIAN</label>
+            <input
+              v-model="bdaysForm.startDate"
+              type="date"
+              class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-blue-600"
+            />
           </div>
           <div>
-            <label class="block text-slate-300 font-semibold mb-1">Plazo en Días Hábiles</label>
-            <input v-model.number="bdaysForm.days" type="number" min="1" max="365" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+            <label class="block text-slate-700 font-semibold mb-1">Plazo en Días Hábiles</label>
+            <input
+              v-model.number="bdaysForm.days"
+              type="number"
+              min="1"
+              max="365"
+              class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-mono tabular-nums text-right focus:outline-none focus:border-blue-600"
+            />
           </div>
         </div>
-        <button @click="calculateBusinessDays" class="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
-          Calcular Vencimiento del Término Legal
+        <button
+          @click="calculateBusinessDays"
+          class="w-full py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-2xs"
+        >
+          Calcular Fecha Límite de Radicación
         </button>
 
-        <div v-if="bdaysResult" class="bg-slate-950 border border-emerald-500/30 rounded-xl p-3.5 text-xs space-y-1">
-          <div class="text-slate-400">Fecha Máxima para Radicar Respuesta:</div>
-          <div class="text-xl font-black text-emerald-400 font-mono">{{ bdaysResult.resultingDueDate }}</div>
-          <div class="text-[11px] text-slate-400">
-            Transcurren <strong>{{ bdaysResult.totalCalendarDaysElapsed }}</strong> días calendario y se omitieron
-            <strong>{{ bdaysResult.holidaysEncountered?.length || 0 }}</strong> festivos nacionales.
+        <div v-if="bdaysResult" class="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 text-xs space-y-1">
+          <div class="text-slate-600 font-medium">Fecha Máxima Legal para Radicar Respuesta:</div>
+          <div class="text-xl font-extrabold text-blue-900 font-mono">{{ bdaysResult.resultingDueDate }}</div>
+          <div class="text-[11px] text-slate-600">
+            Transcurren <strong class="text-slate-900">{{ bdaysResult.totalCalendarDaysElapsed }}</strong> días calendario y se omitieron
+            <strong class="text-slate-900">{{ bdaysResult.holidaysEncountered?.length || 0 }}</strong> festivos nacionales.
           </div>
         </div>
       </div>
