@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -52,6 +53,16 @@ public class GlobalExceptionHandler {
         body.put("error", "El formato de los datos enviados o el JSON de la solicitud no es válido.");
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFoundException(NoResourceFoundException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", 404);
+        body.put("code", "ENDPOINT_NOT_FOUND");
+        body.put("error", "Ruta o recurso no encontrado: " + ex.getResourcePath());
+        body.put("timestamp", Instant.now().toString());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
     @ExceptionHandler(Exception.class)

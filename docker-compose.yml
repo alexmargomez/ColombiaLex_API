@@ -4,7 +4,8 @@ services:
     container_name: alcontable_mariadb
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       MARIADB_DATABASE: "${MARIADB_DATABASE:-alcontable_db}"
       MARIADB_USER: "${MARIADB_USER:-alcontable_user}"
@@ -21,13 +22,15 @@ services:
       retries: 6
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: maven:3.9.9-eclipse-temurin-21-alpine
     container_name: alcontable_backend
+    working_dir: /app
+    entrypoint: ["sh", "-c"]
+    command: ["mvn package -DskipTests -B && exec java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar target/alcontable-api-1.0.0.jar"]
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       SERVER_PORT: "${BACKEND_PORT:-8085}"
       DB_HOST: "${DB_HOST:-db}"
@@ -39,21 +42,22 @@ services:
     ports:
       - "${BACKEND_PORT:-8085}:${BACKEND_PORT:-8085}"
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/pom.xml:/app/pom.xml
+      - ./backend:/app
       - alcontable_maven_repo:/root/.m2
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: node:20-alpine
     container_name: alcontable_frontend
+    working_dir: /app
+    entrypoint: ["sh", "-c"]
+    command: ["[ -d node_modules/@rollup/rollup-linux-x64-musl ] || npm install; npx vite --host 0.0.0.0 --port $${FRONTEND_PORT:-5176}"]
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       FRONTEND_PORT: "${FRONTEND_PORT:-5176}"
       BACKEND_PORT: "${BACKEND_PORT:-8085}"
@@ -71,4 +75,6 @@ volumes:
   alcontable_db_data:
   alcontable_frontend_node_modules:
   alcontable_maven_repo:
+
+
 
