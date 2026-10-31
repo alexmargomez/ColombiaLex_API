@@ -175,7 +175,7 @@ onMounted(() => {
           {{ dashboard.totalActiveClients }}
         </div>
         <div class="text-[11px] text-slate-600 mt-1">
-          {{ dashboard.totalObligationsCount }} declaraciones monitorizadas en MariaDB
+          {{ dashboard.totalObligationsCount }} declaraciones monitorizadas en cartera
         </div>
       </div>
 
@@ -548,7 +548,7 @@ onMounted(() => {
         <div class="border-b border-slate-100 pb-2.5">
           <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
             <i class="fa-solid fa-folder-open text-blue-700"></i>
-            Expediente Digital de Papeles de Trabajo Guardados en MariaDB (NIA 230)
+            Expediente Digital de Papeles de Trabajo del Estudio Contable (NIA 230)
           </h3>
           <p class="text-xs text-slate-500 mt-0.5">
             Trazabilidad auditable de liquidaciones de nómina/UGPP, pre-auditorías de Exógena, estudios Ley 2277 y sanciones por cliente.

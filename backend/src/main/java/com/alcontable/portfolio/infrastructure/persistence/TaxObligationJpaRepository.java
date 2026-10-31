@@ -9,5 +9,8 @@ public interface TaxObligationJpaRepository extends JpaRepository<TaxObligationE
     List<TaxObligationEntity> findAllByOrderByDueDateAsc();
 
     @EntityGraph(attributePaths = "client")
+    List<TaxObligationEntity> findByClient_AccountantUserIdOrderByDueDateAsc(Long accountantUserId);
+
+    @EntityGraph(attributePaths = "client")
     List<TaxObligationEntity> findByClient_IdOrderByDueDateAsc(Long clientId);
 }

@@ -13,15 +13,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class ClientPortfolioUseCase {
+
+    public static final String DEMO_ACCOUNTANT_EMAIL = "contador@alcontable.co";
 
     private static final Set<String> VALID_OBLIGATION_STATUSES = Set.of(
             "PENDIENTE", "EN_PREPARACION", "PRESENTADA", "VENCIDA"
@@ -42,6 +49,29 @@ public class ClientPortfolioUseCase {
     public ClientPortfolioUseCase(AccountingPortfolioRepositoryPort portfolioPort) {
         this(portfolioPort, new EmilianiHolidayEngine());
     }
+
+    public record RegisterAccountantRequest(
+            String email,
+            String fullName,
+            String professionalCardNumber,
+            String firmName,
+            String password
+    ) {}
+
+    public record LoginAccountantRequest(
+            String email,
+            String password
+    ) {}
+
+    public record AccountantAuthResponse(
+            Long id,
+            String email,
+            String fullName,
+            String professionalCardNumber,
+            String firmName,
+            String role,
+            String authToken
+    ) {}
 
     public record CreateClientRequest(
             String nit,
@@ -131,12 +161,122 @@ public class ClientPortfolioUseCase {
             List<WorkpaperDto> recentWorkpapers
     ) {}
 
+    @Transactional
+    public AccountantAuthResponse registerAccountant(RegisterAccountantRequest req) {
+        if (req == null || req.email() == null || req.email().isBlank() || !req.email().contains("@")) {
+            throw new DomainValidationException("Debe ingresar un correo electrónico válido para registrar su cuenta de Contador.");
+        }
+        if (req.fullName() == null || req.fullName().isBlank()) {
+            throw new DomainValidationException("El nombre completo del Contador o Revisor Fiscal es obligatorio.");
+        }
+        if (req.password() == null || req.password().trim().length() < 6) {
+            throw new DomainValidationException("La contraseña debe tener al menos 6 caracteres.");
+        }
+        String normalizedEmail = req.email().trim().toLowerCase();
+        if (portfolioPort.findUserByEmailIgnoreCase(normalizedEmail).isPresent()) {
+            throw new DomainValidationException("Ya existe un contador registrado con el correo " + normalizedEmail);
+        }
+
+        String card = req.professionalCardNumber() != null && !req.professionalCardNumber().isBlank()
+                ? req.professionalCardNumber().trim().toUpperCase()
+                : "TP-PENDIENTE";
+        String firm = req.firmName() != null && !req.firmName().isBlank()
+                ? req.firmName().trim()
+                : "Consultorio Contable Independiente";
+
+        String token = generateSessionToken();
+        AccountantUserEntity saved = portfolioPort.saveUser(new AccountantUserEntity(
+                normalizedEmail,
+                req.fullName().trim(),
+                card,
+                firm,
+                hashPassword(req.password().trim()),
+                "CONTADOR_TITULAR",
+                token
+        ));
+        return toAuthResponse(saved);
+    }
+
+    @Transactional
+    public AccountantAuthResponse loginAccountant(LoginAccountantRequest req) {
+        if (req == null || req.email() == null || req.email().isBlank() || req.password() == null || req.password().isBlank()) {
+            throw new DomainValidationException("Debe ingresar su correo electrónico y contraseña.");
+        }
+        String normalizedEmail = req.email().trim().toLowerCase();
+        AccountantUserEntity user = portfolioPort.findUserByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new DomainValidationException("Credenciales inválidas. Verifique su correo y contraseña."));
+
+        String expectedHash = hashPassword(req.password().trim());
+        if (!expectedHash.equals(user.getPasswordHash())) {
+            throw new DomainValidationException("Credenciales inválidas. Verifique su correo y contraseña.");
+        }
+        if (user.getAuthToken() == null || user.getAuthToken().isBlank()) {
+            user.setAuthToken(generateSessionToken());
+            user = portfolioPort.saveUser(user);
+        }
+        return toAuthResponse(user);
+    }
+
+    @Transactional
+    public AccountantAuthResponse loginDemoAccountant() {
+        AccountantUserEntity demoUser = portfolioPort.findUserByEmailIgnoreCase(DEMO_ACCOUNTANT_EMAIL)
+                .orElseGet(() -> portfolioPort.saveUser(new AccountantUserEntity(
+                        DEMO_ACCOUNTANT_EMAIL,
+                        "Dra. Carolina Méndez, CPA",
+                        "TP-194820-T JCC",
+                        "Méndez & Asociados Consultores Tributarios S.A.S.",
+                        hashPassword("Demo2026*"),
+                        "SOCIA_DIRECTORA",
+                        generateSessionToken()
+                )));
+        if (demoUser.getAuthToken() == null || demoUser.getAuthToken().isBlank()) {
+            demoUser.setAuthToken(generateSessionToken());
+            demoUser = portfolioPort.saveUser(demoUser);
+        }
+        return toAuthResponse(demoUser);
+    }
+
+    @Transactional(readOnly = true)
+    public AccountantAuthResponse getAccountantProfileByToken(String rawToken) {
+        String cleanToken = extractBearerToken(rawToken);
+        if (cleanToken == null) {
+            throw new DomainValidationException("No se proporcionó token de sesión activa.");
+        }
+        AccountantUserEntity user = portfolioPort.findUserByAuthToken(cleanToken)
+                .orElseThrow(() -> new DomainValidationException("Sesión de contador expirada o inválida."));
+        return toAuthResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public Long resolveAccountantUserIdFromToken(String rawToken) {
+        String cleanToken = extractBearerToken(rawToken);
+        if (cleanToken != null) {
+            return portfolioPort.findUserByAuthToken(cleanToken)
+                    .map(AccountantUserEntity::getId)
+                    .orElseThrow(() -> new DomainValidationException("Sesión de contador inválida o expirada. Inicie sesión nuevamente."));
+        }
+        return portfolioPort.findUserByEmailIgnoreCase(DEMO_ACCOUNTANT_EMAIL)
+                .map(AccountantUserEntity::getId)
+                .orElse(null);
+    }
+
     @Transactional(readOnly = true)
     public PortfolioDashboardResponse getDashboard() {
+        return getDashboard(null);
+    }
+
+    @Transactional(readOnly = true)
+    public PortfolioDashboardResponse getDashboard(Long accountantUserId) {
         LocalDate today = LocalDate.now();
-        List<AccountingClientEntity> clients = portfolioPort.findAllClientsOrderByBusinessNameAsc();
-        List<TaxObligationEntity> obligations = portfolioPort.findAllObligationsOrderByDueDateAsc();
-        List<SavedWorkpaperEntity> workpapers = portfolioPort.findAllWorkpapersOrderByCreatedAtDesc();
+        List<AccountingClientEntity> clients = accountantUserId != null
+                ? portfolioPort.findClientsByAccountantUserIdOrderByBusinessNameAsc(accountantUserId)
+                : portfolioPort.findAllClientsOrderByBusinessNameAsc();
+        List<TaxObligationEntity> obligations = accountantUserId != null
+                ? portfolioPort.findObligationsByAccountantUserIdOrderByDueDateAsc(accountantUserId)
+                : portfolioPort.findAllObligationsOrderByDueDateAsc();
+        List<SavedWorkpaperEntity> workpapers = accountantUserId != null
+                ? portfolioPort.findWorkpapersByAccountantUserIdOrderByCreatedAtDesc(accountantUserId)
+                : portfolioPort.findAllWorkpapersOrderByCreatedAtDesc();
 
         List<ClientSummaryDto> clientDtos = clients.stream().map(this::toClientDto).toList();
 
@@ -220,6 +360,11 @@ public class ClientPortfolioUseCase {
 
     @Transactional
     public ClientSummaryDto createClient(CreateClientRequest req) {
+        return createClient(req, null);
+    }
+
+    @Transactional
+    public ClientSummaryDto createClient(CreateClientRequest req, Long accountantUserId) {
         if (req == null || req.nit() == null || req.nit().isBlank()) {
             throw new DomainValidationException("El NIT o documento del cliente es obligatorio.");
         }
@@ -232,8 +377,11 @@ public class ClientPortfolioUseCase {
 
         NitVO.NitVerificationReport nitReport = NitVO.inspectAndCalculate(req.nit());
         String cleanNit = nitReport.cleanBaseDigits();
-        if (portfolioPort.findClientByCleanNit(cleanNit).isPresent()) {
-            throw new DomainValidationException("Ya existe un cliente registrado en la cartera con el NIT " + cleanNit);
+        boolean existsInPortfolio = accountantUserId != null
+                ? portfolioPort.findClientByCleanNitAndAccountantUserId(cleanNit, accountantUserId).isPresent()
+                : portfolioPort.findClientByCleanNit(cleanNit).isPresent();
+        if (existsInPortfolio) {
+            throw new DomainValidationException("Ya existe un cliente registrado en su cartera privada con el NIT " + cleanNit);
         }
 
         String dv = String.valueOf(nitReport.calculatedCheckDigit());
@@ -257,6 +405,7 @@ public class ClientPortfolioUseCase {
         boolean art114 = req.appliesArt1141Exemption() != null ? req.appliesArt1141Exemption() : true;
 
         AccountingClientEntity saved = portfolioPort.saveClient(new AccountingClientEntity(
+                accountantUserId,
                 cleanNit,
                 dv,
                 lastDigit,
@@ -340,6 +489,11 @@ public class ClientPortfolioUseCase {
 
     @Transactional
     public ObligationRadarDto updateObligationStatus(Long obligationId, String newStatus) {
+        return updateObligationStatus(obligationId, newStatus, null);
+    }
+
+    @Transactional
+    public ObligationRadarDto updateObligationStatus(Long obligationId, String newStatus, Long accountantUserId) {
         if (obligationId == null) {
             throw new DomainValidationException("El ID de la obligación tributaria es obligatorio.");
         }
@@ -355,6 +509,10 @@ public class ClientPortfolioUseCase {
 
         TaxObligationEntity ob = portfolioPort.findObligationById(obligationId)
                 .orElseThrow(() -> new DomainValidationException("No existe la obligación tributaria con ID " + obligationId));
+        if (accountantUserId != null && ob.getClient() != null && ob.getClient().getAccountantUserId() != null
+                && !ob.getClient().getAccountantUserId().equals(accountantUserId)) {
+            throw new DomainValidationException("Acceso denegado: La obligación tributaria pertenece a la cartera privada de otro contador.");
+        }
         ob.setStatus(normalized);
         if ("PRESENTADA".equals(normalized)) {
             ob.setCalculatedSanctionCop(BigDecimal.ZERO);
@@ -388,6 +546,11 @@ public class ClientPortfolioUseCase {
 
     @Transactional
     public WorkpaperDto saveWorkpaper(SaveWorkpaperRequest req) {
+        return saveWorkpaper(req, null);
+    }
+
+    @Transactional
+    public WorkpaperDto saveWorkpaper(SaveWorkpaperRequest req, Long accountantUserId) {
         if (req == null || req.title() == null || req.title().isBlank()) {
             throw new DomainValidationException("El título del papel de trabajo es obligatorio.");
         }
@@ -397,8 +560,17 @@ public class ClientPortfolioUseCase {
                     .orElseThrow(() -> new DomainValidationException(
                             "No existe el cliente contable con ID " + req.clientId() + " para asociar el papel de trabajo."
                     ));
+            if (accountantUserId != null && client.getAccountantUserId() != null
+                    && !client.getAccountantUserId().equals(accountantUserId)) {
+                throw new DomainValidationException(
+                        "Acceso denegado: No puede guardar papeles de trabajo en un cliente perteneciente a otro contador."
+                );
+            }
         } else {
-            client = portfolioPort.findAllClientsOrderByBusinessNameAsc().stream().findFirst().orElse(null);
+            List<AccountingClientEntity> availableClients = accountantUserId != null
+                    ? portfolioPort.findClientsByAccountantUserIdOrderByBusinessNameAsc(accountantUserId)
+                    : portfolioPort.findAllClientsOrderByBusinessNameAsc();
+            client = availableClients.stream().findFirst().orElse(null);
         }
 
         String title = req.title().trim();
@@ -412,7 +584,12 @@ public class ClientPortfolioUseCase {
             summary = summary.substring(0, 700);
         }
 
+        Long effectiveOwnerId = accountantUserId != null
+                ? accountantUserId
+                : (client != null ? client.getAccountantUserId() : null);
+
         SavedWorkpaperEntity entity = new SavedWorkpaperEntity(
+                effectiveOwnerId,
                 client,
                 req.workpaperType() != null && !req.workpaperType().isBlank() ? req.workpaperType().trim() : "GENERAL",
                 title,
@@ -426,13 +603,65 @@ public class ClientPortfolioUseCase {
 
     @Transactional(readOnly = true)
     public List<WorkpaperDto> listWorkpapers(Long clientId) {
-        if (clientId != null && !portfolioPort.existsClientById(clientId)) {
-            throw new DomainValidationException("No existe el cliente contable con ID " + clientId + ".");
+        return listWorkpapers(clientId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkpaperDto> listWorkpapers(Long clientId, Long accountantUserId) {
+        if (clientId != null) {
+            AccountingClientEntity client = portfolioPort.findClientById(clientId)
+                    .orElseThrow(() -> new DomainValidationException("No existe el cliente contable con ID " + clientId + "."));
+            if (accountantUserId != null && client.getAccountantUserId() != null
+                    && !client.getAccountantUserId().equals(accountantUserId)) {
+                throw new DomainValidationException("Acceso denegado: El cliente consultado pertenece a la cartera privada de otro contador.");
+            }
         }
-        List<SavedWorkpaperEntity> list = clientId != null
-                ? portfolioPort.findWorkpapersByClientIdOrderByCreatedAtDesc(clientId)
-                : portfolioPort.findAllWorkpapersOrderByCreatedAtDesc();
+        List<SavedWorkpaperEntity> list;
+        if (clientId != null) {
+            list = portfolioPort.findWorkpapersByClientIdOrderByCreatedAtDesc(clientId);
+        } else if (accountantUserId != null) {
+            list = portfolioPort.findWorkpapersByAccountantUserIdOrderByCreatedAtDesc(accountantUserId);
+        } else {
+            list = portfolioPort.findAllWorkpapersOrderByCreatedAtDesc();
+        }
         return list.stream().map(this::toWorkpaperDto).toList();
+    }
+
+    public static String hashPassword(String rawPassword) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(("alcontable-salt-2026:" + rawPassword).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Algoritmo SHA-256 no disponible", e);
+        }
+    }
+
+    private String generateSessionToken() {
+        return "alc_" + UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    }
+
+    private String extractBearerToken(String rawHeader) {
+        if (rawHeader == null || rawHeader.isBlank()) {
+            return null;
+        }
+        String trimmed = rawHeader.trim();
+        if (trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            trimmed = trimmed.substring(7).trim();
+        }
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private AccountantAuthResponse toAuthResponse(AccountantUserEntity user) {
+        return new AccountantAuthResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getProfessionalCardNumber(),
+                user.getFirmName(),
+                user.getRole(),
+                user.getAuthToken()
+        );
     }
 
     private LocalDate adjustToNextBusinessDay(LocalDate date) {

@@ -1,8 +1,59 @@
+export interface AccountantUserSession {
+  id: number;
+  email: string;
+  fullName: string;
+  professionalCardNumber: string;
+  firmName: string;
+  role: string;
+  authToken: string;
+}
+
+const AUTH_TOKEN_KEY = 'alcontable_auth_token';
+const AUTH_USER_KEY = 'alcontable_accountant_user';
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredAccountantSession(): AccountantUserSession | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AccountantUserSession;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAccountantSession(session: AccountantUserSession): void {
+  try {
+    localStorage.setItem(AUTH_TOKEN_KEY, session.authToken);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(session));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function clearStoredAccountantSession(): void {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export async function apiRequest<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getAuthToken();
   const res = await fetch(path, {
     ...options,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...((options.headers as Record<string, string>) || {}),
     },
   });

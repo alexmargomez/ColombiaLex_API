@@ -12,20 +12,28 @@ public class JpaAccountingPortfolioAdapter implements AccountingPortfolioReposit
     private final AccountingClientJpaRepository clientRepo;
     private final TaxObligationJpaRepository obligationRepo;
     private final SavedWorkpaperJpaRepository workpaperRepo;
+    private final AccountantUserJpaRepository userRepo;
 
     public JpaAccountingPortfolioAdapter(
             AccountingClientJpaRepository clientRepo,
             TaxObligationJpaRepository obligationRepo,
-            SavedWorkpaperJpaRepository workpaperRepo
+            SavedWorkpaperJpaRepository workpaperRepo,
+            AccountantUserJpaRepository userRepo
     ) {
         this.clientRepo = clientRepo;
         this.obligationRepo = obligationRepo;
         this.workpaperRepo = workpaperRepo;
+        this.userRepo = userRepo;
     }
 
     @Override
     public List<AccountingClientEntity> findAllClientsOrderByBusinessNameAsc() {
         return clientRepo.findAllByOrderByBusinessNameAsc();
+    }
+
+    @Override
+    public List<AccountingClientEntity> findClientsByAccountantUserIdOrderByBusinessNameAsc(Long accountantUserId) {
+        return clientRepo.findByAccountantUserIdOrderByBusinessNameAsc(accountantUserId);
     }
 
     @Override
@@ -35,7 +43,12 @@ public class JpaAccountingPortfolioAdapter implements AccountingPortfolioReposit
 
     @Override
     public Optional<AccountingClientEntity> findClientByCleanNit(String cleanNit) {
-        return clientRepo.findByNit(cleanNit);
+        return clientRepo.findFirstByNit(cleanNit);
+    }
+
+    @Override
+    public Optional<AccountingClientEntity> findClientByAccountantUserIdAndCleanNit(Long accountantUserId, String cleanNit) {
+        return clientRepo.findFirstByAccountantUserIdAndNit(accountantUserId, cleanNit);
     }
 
     @Override
@@ -51,6 +64,11 @@ public class JpaAccountingPortfolioAdapter implements AccountingPortfolioReposit
     @Override
     public List<TaxObligationEntity> findAllObligationsOrderByDueDateAsc() {
         return obligationRepo.findAllByOrderByDueDateAsc();
+    }
+
+    @Override
+    public List<TaxObligationEntity> findObligationsByAccountantUserIdOrderByDueDateAsc(Long accountantUserId) {
+        return obligationRepo.findByClient_AccountantUserIdOrderByDueDateAsc(accountantUserId);
     }
 
     @Override
@@ -74,6 +92,11 @@ public class JpaAccountingPortfolioAdapter implements AccountingPortfolioReposit
     }
 
     @Override
+    public List<SavedWorkpaperEntity> findWorkpapersByAccountantUserIdOrderByCreatedAtDesc(Long accountantUserId) {
+        return workpaperRepo.findByAccountantUserIdOrderByCreatedAtDesc(accountantUserId);
+    }
+
+    @Override
     public List<SavedWorkpaperEntity> findWorkpapersByClientIdOrderByCreatedAtDesc(Long clientId) {
         return workpaperRepo.findByClient_IdOrderByCreatedAtDesc(clientId);
     }
@@ -81,5 +104,20 @@ public class JpaAccountingPortfolioAdapter implements AccountingPortfolioReposit
     @Override
     public SavedWorkpaperEntity saveWorkpaper(SavedWorkpaperEntity workpaper) {
         return workpaperRepo.save(workpaper);
+    }
+
+    @Override
+    public Optional<AccountantUserEntity> findUserByEmail(String email) {
+        return userRepo.findByEmailIgnoreCase(email);
+    }
+
+    @Override
+    public Optional<AccountantUserEntity> findUserBySessionToken(String sessionToken) {
+        return userRepo.findBySessionToken(sessionToken);
+    }
+
+    @Override
+    public AccountantUserEntity saveUser(AccountantUserEntity user) {
+        return userRepo.save(user);
     }
 }

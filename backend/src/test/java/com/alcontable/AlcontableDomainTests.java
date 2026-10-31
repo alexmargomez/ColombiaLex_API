@@ -6,6 +6,7 @@ import com.alcontable.portfolio.application.usecases.ClientPortfolioUseCase;
 import com.alcontable.sanctions.application.usecases.DianSanctionAndInterestUseCase;
 import com.alcontable.taxplanning.application.usecases.TaxPlanningAndLaw2277UseCase;
 import com.alcontable.portfolio.domain.ports.AccountingPortfolioRepositoryPort;
+import com.alcontable.portfolio.infrastructure.persistence.AccountantUserEntity;
 import com.alcontable.portfolio.infrastructure.persistence.AccountingClientEntity;
 import com.alcontable.portfolio.infrastructure.persistence.SavedWorkpaperEntity;
 import com.alcontable.portfolio.infrastructure.persistence.TaxObligationEntity;
@@ -393,50 +394,12 @@ class AlcontableDomainTests {
     @Test
     @DisplayName("ALcontable Motor 1 (Arquitectura Hexagonal Cartera & Radar): Crea cliente, valida DV Módulo 11 y genera vencimientos en días hábiles")
     void testClientPortfolioHexagonalUseCaseWithFakePort() {
+        List<AccountantUserEntity> users = new ArrayList<>();
         List<AccountingClientEntity> clients = new ArrayList<>();
         List<TaxObligationEntity> obligations = new ArrayList<>();
         List<SavedWorkpaperEntity> workpapers = new ArrayList<>();
 
-        AccountingPortfolioRepositoryPort fakePortfolioPort = new AccountingPortfolioRepositoryPort() {
-            @Override
-            public List<AccountingClientEntity> findAllClientsOrderByBusinessNameAsc() { return clients; }
-            @Override
-            public Optional<AccountingClientEntity> findClientById(Long id) { return clients.stream().findFirst(); }
-            @Override
-            public Optional<AccountingClientEntity> findClientByCleanNit(String cleanNit) {
-                return clients.stream().filter(c -> c.getNit().equals(cleanNit)).findFirst();
-            }
-            @Override
-            public boolean existsClientById(Long id) { return !clients.isEmpty(); }
-            @Override
-            public AccountingClientEntity saveClient(AccountingClientEntity client) {
-                clients.add(client);
-                return client;
-            }
-            @Override
-            public List<TaxObligationEntity> findAllObligationsOrderByDueDateAsc() { return obligations; }
-            @Override
-            public Optional<TaxObligationEntity> findObligationById(Long id) { return obligations.stream().findFirst(); }
-            @Override
-            public TaxObligationEntity saveObligation(TaxObligationEntity obligation) {
-                obligations.add(obligation);
-                return obligation;
-            }
-            @Override
-            public List<TaxObligationEntity> saveAllObligations(List<TaxObligationEntity> obs) {
-                obligations.addAll(obs);
-                return obs;
-            }
-            @Override
-            public List<SavedWorkpaperEntity> findAllWorkpapersOrderByCreatedAtDesc() { return workpapers; }
-            @Override
-            public List<SavedWorkpaperEntity> findWorkpapersByClientIdOrderByCreatedAtDesc(Long clientId) { return workpapers; }
-            @Override
-            public SavedWorkpaperEntity saveWorkpaper(SavedWorkpaperEntity wp) {
-                workpapers.add(wp);
-                return wp;
-            }
-        };
+        AccountingPortfolioRepositoryPort fakePortfolioPort = createFakePortfolioPort(users, clients, obligations, workpapers);
 
         var portfolioUseCase = new ClientPortfolioUseCase(fakePortfolioPort, holidayEngine);
         var created = portfolioUseCase.createClient(new ClientPortfolioUseCase.CreateClientRequest(
@@ -453,6 +416,222 @@ class AlcontableDomainTests {
             assertNotEquals(DayOfWeek.SUNDAY, ob.getDueDate().getDayOfWeek());
             assertFalse(holidayEngine.isHoliday(ob.getDueDate()));
         }
+    }
+
+    @Test
+    @DisplayName("ALcontable Multi-Tenant (Autenticación y Privacidad por Contador): Aísla estrictamente clientes, obligaciones y papeles de trabajo entre contadores")
+    void testMultiTenantAccountantIsolationAndAuthentication() {
+        List<AccountantUserEntity> users = new ArrayList<>();
+        List<AccountingClientEntity> clients = new ArrayList<>();
+        List<TaxObligationEntity> obligations = new ArrayList<>();
+        List<SavedWorkpaperEntity> workpapers = new ArrayList<>();
+
+        AccountingPortfolioRepositoryPort fakePortfolioPort = createFakePortfolioPort(users, clients, obligations, workpapers);
+        var portfolioUseCase = new ClientPortfolioUseCase(fakePortfolioPort, holidayEngine);
+
+        var accountantA = portfolioUseCase.registerAccountant(new ClientPortfolioUseCase.RegisterAccountantRequest(
+                "ana.restrepo@contadores.co",
+                "Dra. Ana María Restrepo",
+                "TP-102938-T",
+                "Restrepo Consultores S.A.S.",
+                "ClaveSegura2026*"
+        ));
+        var accountantB = portfolioUseCase.registerAccountant(new ClientPortfolioUseCase.RegisterAccountantRequest(
+                "carlos.gomez@revisoria.co",
+                "Dr. Carlos Gómez",
+                "TP-554433-T",
+                "Gómez Revisoría Fiscal Ltda.",
+                "OtraClave2026*"
+        ));
+
+        assertNotNull(accountantA.authToken());
+        assertNotNull(accountantB.authToken());
+        assertNotEquals(accountantA.id(), accountantB.id());
+
+        // Login exitoso de Ana
+        var loginA = portfolioUseCase.loginAccountant(new ClientPortfolioUseCase.LoginAccountantRequest(
+                "ana.restrepo@contadores.co", "ClaveSegura2026*"
+        ));
+        assertEquals(accountantA.id(), loginA.id());
+
+        // Ana registra un cliente privado y un papel de trabajo privado
+        var clientA = portfolioUseCase.createClient(new ClientPortfolioUseCase.CreateClientRequest(
+                "900.123.456", "Clínica Odontológica del Norte S.A.S.", "JURIDICA", "ORDINARIO",
+                "BIMESTRAL", "05,07,14,48", "11001", "BOGOTÁ, D.C.",
+                new BigDecimal("980000000"), 8, true
+        ), accountantA.id());
+
+        portfolioUseCase.saveWorkpaper(new ClientPortfolioUseCase.SaveWorkpaperRequest(
+                clientA.id(), "NOMINA_UGPP_PUC", "Auditoría Nómina Octubre", "2026-M10",
+                "Planilla auditada sin excesos UGPP", new BigDecimal("1200000"), "{}"
+        ), accountantA.id());
+
+        // El dashboard de Ana tiene 1 cliente, 2 obligaciones y 1 papel de trabajo
+        var dashA = portfolioUseCase.getDashboard(accountantA.id());
+        assertEquals(1, dashA.totalActiveClients());
+        assertEquals(2, dashA.totalObligationsCount());
+        assertEquals(1, dashA.recentWorkpapers().size());
+
+        // El dashboard de Carlos (Accountant B) está 100% vacío y aislado (no ve los datos de Ana)
+        var dashB = portfolioUseCase.getDashboard(accountantB.id());
+        assertEquals(0, dashB.totalActiveClients());
+        assertEquals(0, dashB.totalObligationsCount());
+        assertEquals(0, dashB.recentWorkpapers().size());
+
+        // Si Carlos intenta guardar un papel de trabajo sobre el cliente de Ana, el sistema lo bloquea
+        assertThrows(DomainValidationException.class, () ->
+                portfolioUseCase.saveWorkpaper(new ClientPortfolioUseCase.SaveWorkpaperRequest(
+                        clientA.id(), "EXOGENA_PREAUDITORIA", "Intento Cruzado", "2026",
+                        "No permitido", BigDecimal.ZERO, "{}"
+                ), accountantB.id())
+        );
+    }
+
+    private AccountingPortfolioRepositoryPort createFakePortfolioPort(
+            List<AccountantUserEntity> users,
+            List<AccountingClientEntity> clients,
+            List<TaxObligationEntity> obligations,
+            List<SavedWorkpaperEntity> workpapers
+    ) {
+        return new AccountingPortfolioRepositoryPort() {
+            private long userSeq = 1L;
+            private long clientSeq = 1L;
+            private long obSeq = 1L;
+            private long wpSeq = 1L;
+
+            @Override
+            public Optional<AccountantUserEntity> findUserByEmailIgnoreCase(String email) {
+                return users.stream().filter(u -> u.getEmail().equalsIgnoreCase(email)).findFirst();
+            }
+
+            @Override
+            public Optional<AccountantUserEntity> findUserByAuthToken(String authToken) {
+                return users.stream().filter(u -> authToken.equals(u.getAuthToken())).findFirst();
+            }
+
+            @Override
+            public Optional<AccountantUserEntity> findUserById(Long id) {
+                return users.stream().filter(u -> u.getId().equals(id)).findFirst();
+            }
+
+            @Override
+            public AccountantUserEntity saveUser(AccountantUserEntity user) {
+                if (user.getId() == null) {
+                    try {
+                        var f = AccountantUserEntity.class.getDeclaredField("id");
+                        f.setAccessible(true);
+                        f.set(user, userSeq++);
+                    } catch (Exception ignored) {}
+                    users.add(user);
+                }
+                return user;
+            }
+
+            @Override
+            public List<AccountingClientEntity> findAllClientsOrderByBusinessNameAsc() { return clients; }
+
+            @Override
+            public List<AccountingClientEntity> findClientsByAccountantUserIdOrderByBusinessNameAsc(Long accountantUserId) {
+                return clients.stream().filter(c -> accountantUserId.equals(c.getAccountantUserId())).toList();
+            }
+
+            @Override
+            public Optional<AccountingClientEntity> findClientById(Long id) {
+                return clients.stream().filter(c -> id.equals(c.getId())).findFirst();
+            }
+
+            @Override
+            public Optional<AccountingClientEntity> findClientByCleanNit(String cleanNit) {
+                return clients.stream().filter(c -> c.getNit().equals(cleanNit)).findFirst();
+            }
+
+            @Override
+            public Optional<AccountingClientEntity> findClientByCleanNitAndAccountantUserId(String cleanNit, Long accountantUserId) {
+                return clients.stream()
+                        .filter(c -> c.getNit().equals(cleanNit) && accountantUserId.equals(c.getAccountantUserId()))
+                        .findFirst();
+            }
+
+            @Override
+            public boolean existsClientById(Long id) {
+                return clients.stream().anyMatch(c -> id.equals(c.getId()));
+            }
+
+            @Override
+            public AccountingClientEntity saveClient(AccountingClientEntity client) {
+                if (client.getId() == null) {
+                    try {
+                        var f = AccountingClientEntity.class.getDeclaredField("id");
+                        f.setAccessible(true);
+                        f.set(client, clientSeq++);
+                    } catch (Exception ignored) {}
+                    clients.add(client);
+                }
+                return client;
+            }
+
+            @Override
+            public List<TaxObligationEntity> findAllObligationsOrderByDueDateAsc() { return obligations; }
+
+            @Override
+            public List<TaxObligationEntity> findObligationsByAccountantUserIdOrderByDueDateAsc(Long accountantUserId) {
+                return obligations.stream()
+                        .filter(o -> o.getClient() != null && accountantUserId.equals(o.getClient().getAccountantUserId()))
+                        .toList();
+            }
+
+            @Override
+            public Optional<TaxObligationEntity> findObligationById(Long id) {
+                return obligations.stream().filter(o -> id.equals(o.getId())).findFirst();
+            }
+
+            @Override
+            public TaxObligationEntity saveObligation(TaxObligationEntity obligation) {
+                if (obligation.getId() == null) {
+                    try {
+                        var f = TaxObligationEntity.class.getDeclaredField("id");
+                        f.setAccessible(true);
+                        f.set(obligation, obSeq++);
+                    } catch (Exception ignored) {}
+                    obligations.add(obligation);
+                }
+                return obligation;
+            }
+
+            @Override
+            public List<TaxObligationEntity> saveAllObligations(List<TaxObligationEntity> obs) {
+                obs.forEach(this::saveObligation);
+                return obs;
+            }
+
+            @Override
+            public List<SavedWorkpaperEntity> findAllWorkpapersOrderByCreatedAtDesc() { return workpapers; }
+
+            @Override
+            public List<SavedWorkpaperEntity> findWorkpapersByAccountantUserIdOrderByCreatedAtDesc(Long accountantUserId) {
+                return workpapers.stream().filter(w -> accountantUserId.equals(w.getAccountantUserId())).toList();
+            }
+
+            @Override
+            public List<SavedWorkpaperEntity> findWorkpapersByClientIdOrderByCreatedAtDesc(Long clientId) {
+                return workpapers.stream()
+                        .filter(w -> w.getClient() != null && clientId.equals(w.getClient().getId()))
+                        .toList();
+            }
+
+            @Override
+            public SavedWorkpaperEntity saveWorkpaper(SavedWorkpaperEntity wp) {
+                if (wp.getId() == null) {
+                    try {
+                        var f = SavedWorkpaperEntity.class.getDeclaredField("id");
+                        f.setAccessible(true);
+                        f.set(wp, wpSeq++);
+                    } catch (Exception ignored) {}
+                    workpapers.add(wp);
+                }
+                return wp;
+            }
+        };
     }
 
     private MunicipalityRepositoryPort createSampleMunicipalityPort() {
