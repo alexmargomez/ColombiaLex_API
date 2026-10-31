@@ -9,5 +9,8 @@ public interface SavedWorkpaperJpaRepository extends JpaRepository<SavedWorkpape
     List<SavedWorkpaperEntity> findAllByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = "client")
+    List<SavedWorkpaperEntity> findByAccountantUserIdOrderByCreatedAtDesc(Long accountantUserId);
+
+    @EntityGraph(attributePaths = "client")
     List<SavedWorkpaperEntity> findByClient_IdOrderByCreatedAtDesc(Long clientId);
 }

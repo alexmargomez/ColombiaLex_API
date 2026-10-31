@@ -41,6 +41,36 @@ public class AccountingWorkstationController {
         this.sanctionUseCase = sanctionUseCase;
     }
 
+    @PostMapping("/auth/register")
+    @Operation(summary = "Registrar cuenta privada de Contador Público / Firma Contable")
+    public ClientPortfolioUseCase.AccountantAuthResponse registerAccountant(
+            @RequestBody ClientPortfolioUseCase.RegisterAccountantRequest request
+    ) {
+        return portfolioUseCase.registerAccountant(request);
+    }
+
+    @PostMapping("/auth/login")
+    @Operation(summary = "Iniciar sesión en la Estación Contable Privada")
+    public ClientPortfolioUseCase.AccountantAuthResponse loginAccountant(
+            @RequestBody ClientPortfolioUseCase.LoginAccountantRequest request
+    ) {
+        return portfolioUseCase.loginAccountant(request);
+    }
+
+    @PostMapping("/auth/demo")
+    @Operation(summary = "Acceso demostrativo instantáneo a la firma contable de prueba")
+    public ClientPortfolioUseCase.AccountantAuthResponse loginDemoAccountant() {
+        return portfolioUseCase.loginDemoAccountant();
+    }
+
+    @GetMapping("/auth/me")
+    @Operation(summary = "Consultar perfil del Contador autenticado")
+    public ClientPortfolioUseCase.AccountantAuthResponse getCurrentAccountant(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        return portfolioUseCase.getAccountantProfileByToken(authHeader);
+    }
+
     @GetMapping("/parameters/current")
     @Operation(summary = "Consultar parámetros vigentes UVT, SMLMV, Auxilio de Transporte y Sanción Mínima 10 UVT")
     public Map<String, Object> getCurrentParameters(@RequestParam(defaultValue = "2026") int year) {
@@ -56,40 +86,53 @@ public class AccountingWorkstationController {
     }
 
     @GetMapping("/portfolio/dashboard")
-    @Operation(summary = "Módulo 1: Obtener Cartera de Clientes, Radar de Obligaciones Tributarias y Papeles de Trabajo guardados en MariaDB")
-    public ClientPortfolioUseCase.PortfolioDashboardResponse getPortfolioDashboard() {
-        return portfolioUseCase.getDashboard();
+    @Operation(summary = "Módulo 1: Obtener Cartera Privada de Clientes, Radar de Obligaciones Tributarias y Papeles de Trabajo del Contador")
+    public ClientPortfolioUseCase.PortfolioDashboardResponse getPortfolioDashboard(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long accountantUserId = portfolioUseCase.resolveAccountantUserIdFromToken(authHeader);
+        return portfolioUseCase.getDashboard(accountantUserId);
     }
 
     @PostMapping("/portfolio/clients")
-    @Operation(summary = "Módulo 1: Registrar nuevo cliente en la cartera contable (calcula DV Módulo 11 y autogenera calendario de obligaciones)")
+    @Operation(summary = "Módulo 1: Registrar nuevo cliente en la cartera contable privada del contador")
     public ClientPortfolioUseCase.ClientSummaryDto createClient(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ClientPortfolioUseCase.CreateClientRequest request
     ) {
-        return portfolioUseCase.createClient(request);
+        Long accountantUserId = portfolioUseCase.resolveAccountantUserIdFromToken(authHeader);
+        return portfolioUseCase.createClient(request, accountantUserId);
     }
 
     @PatchMapping("/portfolio/obligations/{id}/status")
-    @Operation(summary = "Módulo 1: Actualizar estado de una obligación tributaria (PENDIENTE, EN_PREPARACION, PRESENTADA, VENCIDA)")
+    @Operation(summary = "Módulo 1: Actualizar estado de una obligación tributaria del cliente del contador")
     public ClientPortfolioUseCase.ObligationRadarDto updateObligationStatus(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable Long id,
             @RequestBody Map<String, String> body
     ) {
-        return portfolioUseCase.updateObligationStatus(id, body != null ? body.get("status") : null);
+        Long accountantUserId = portfolioUseCase.resolveAccountantUserIdFromToken(authHeader);
+        return portfolioUseCase.updateObligationStatus(id, body != null ? body.get("status") : null, accountantUserId);
     }
 
     @GetMapping("/portfolio/workpapers")
-    @Operation(summary = "Módulo 1: Consultar papeles de trabajo guardados en MariaDB (filtrables por clientId)")
-    public List<ClientPortfolioUseCase.WorkpaperDto> listWorkpapers(@RequestParam(required = false) Long clientId) {
-        return portfolioUseCase.listWorkpapers(clientId);
+    @Operation(summary = "Módulo 1: Consultar papeles de trabajo privados guardados en MariaDB (filtrables por clientId)")
+    public List<ClientPortfolioUseCase.WorkpaperDto> listWorkpapers(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) Long clientId
+    ) {
+        Long accountantUserId = portfolioUseCase.resolveAccountantUserIdFromToken(authHeader);
+        return portfolioUseCase.listWorkpapers(clientId, accountantUserId);
     }
 
     @PostMapping("/portfolio/workpapers")
-    @Operation(summary = "Guardar un Papel de Trabajo en el expediente del cliente en MariaDB")
+    @Operation(summary = "Guardar un Papel de Trabajo en el expediente privado del cliente en MariaDB")
     public ClientPortfolioUseCase.WorkpaperDto saveWorkpaper(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ClientPortfolioUseCase.SaveWorkpaperRequest request
     ) {
-        return portfolioUseCase.saveWorkpaper(request);
+        Long accountantUserId = portfolioUseCase.resolveAccountantUserIdFromToken(authHeader);
+        return portfolioUseCase.saveWorkpaper(request, accountantUserId);
     }
 
     @PostMapping("/payroll/batch-audit")

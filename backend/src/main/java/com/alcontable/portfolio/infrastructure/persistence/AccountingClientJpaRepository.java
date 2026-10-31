@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AccountingClientJpaRepository extends JpaRepository<AccountingClientEntity, Long> {
-    Optional<AccountingClientEntity> findByNit(String nit);
+    Optional<AccountingClientEntity> findFirstByNit(String nit);
+    Optional<AccountingClientEntity> findFirstByAccountantUserIdAndNit(Long accountantUserId, String nit);
     List<AccountingClientEntity> findAllByOrderByBusinessNameAsc();
+    List<AccountingClientEntity> findByAccountantUserIdOrderByBusinessNameAsc(Long accountantUserId);
 }

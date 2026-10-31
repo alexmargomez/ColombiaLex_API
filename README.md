@@ -57,6 +57,5 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-- **Frontend SPA Interactivo:** `http://localhost:5176`
-- **Backend API REST (Java 21):** `http://localhost:8085/api/v1/health`
-- **Swagger UI (OpenAPI 3.1):** `http://localhost:8085/api/v1/swagger-ui.html`
+- **Estación de Trabajo Web (Vue 3 SPA):** `http://localhost:5176`
+- **API Interna (Web & Integración Móvil — Java 21):** `http://localhost:8085/api/v1/health`

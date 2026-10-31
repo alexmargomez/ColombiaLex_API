@@ -196,7 +196,7 @@ onMounted(() => {
           @click="savePlanningWorkpaperInMariaDB"
           class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold transition"
         >
-          <i class="fa-solid fa-floppy-disk mr-1"></i>Guardar en Expediente (MariaDB)
+          <i class="fa-solid fa-floppy-disk mr-1"></i>Guardar en Expediente Digital
         </button>
       </div>
     </div>

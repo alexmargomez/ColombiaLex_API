@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
         name = "accounting_workpapers",
         indexes = {
                 @Index(name = "idx_wp_client", columnList = "client_id"),
+                @Index(name = "idx_wp_user", columnList = "accountant_user_id"),
                 @Index(name = "idx_wp_type", columnList = "workpaper_type"),
                 @Index(name = "idx_wp_created_at", columnList = "created_at")
         }
@@ -18,6 +19,9 @@ public class SavedWorkpaperEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "accountant_user_id")
+    private Long accountantUserId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "client_id")
@@ -57,6 +61,31 @@ public class SavedWorkpaperEntity {
             BigDecimal detectedSavingsOrRiskCop,
             String payloadJson
     ) {
+        this(
+                client != null ? client.getAccountantUserId() : null,
+                client,
+                workpaperType,
+                title,
+                taxPeriod,
+                executiveSummary,
+                detectedSavingsOrRiskCop,
+                payloadJson
+        );
+    }
+
+    public SavedWorkpaperEntity(
+            Long accountantUserId,
+            AccountingClientEntity client,
+            String workpaperType,
+            String title,
+            String taxPeriod,
+            String executiveSummary,
+            BigDecimal detectedSavingsOrRiskCop,
+            String payloadJson
+    ) {
+        this.accountantUserId = accountantUserId != null
+                ? accountantUserId
+                : (client != null ? client.getAccountantUserId() : null);
         this.client = client;
         this.workpaperType = workpaperType;
         this.title = title;
@@ -79,6 +108,14 @@ public class SavedWorkpaperEntity {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getAccountantUserId() {
+        return accountantUserId;
+    }
+
+    public void setAccountantUserId(Long accountantUserId) {
+        this.accountantUserId = accountantUserId;
     }
 
     public AccountingClientEntity getClient() {

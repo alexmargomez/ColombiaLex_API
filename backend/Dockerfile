@@ -1,12 +1,9 @@
-FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
-WORKDIR /build
+FROM maven:3.9.9-eclipse-temurin-21-alpine
+WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests -B
-
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
-COPY --from=builder /build/target/alcontable-api-1.0.0.jar app.jar
 EXPOSE 8085
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "mvn package -DskipTests -B && exec java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar target/alcontable-api-1.0.0.jar"]
+

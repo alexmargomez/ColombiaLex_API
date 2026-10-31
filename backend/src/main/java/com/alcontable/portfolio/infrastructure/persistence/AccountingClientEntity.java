@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "accounting_clients",
         indexes = {
-                @Index(name = "idx_acc_client_nit", columnList = "nit", unique = true),
+                @Index(name = "idx_acc_client_nit", columnList = "nit"),
+                @Index(name = "idx_acc_client_user", columnList = "accountant_user_id"),
                 @Index(name = "idx_acc_client_regime", columnList = "tax_regime"),
                 @Index(name = "idx_acc_client_last_digit", columnList = "last_nit_digit")
         }
@@ -19,7 +20,10 @@ public class AccountingClientEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nit", nullable = false, length = 20, unique = true)
+    @Column(name = "accountant_user_id")
+    private Long accountantUserId;
+
+    @Column(name = "nit", nullable = false, length = 20)
     private String nit;
 
     @Column(name = "dv", nullable = false, length = 2)
@@ -83,6 +87,43 @@ public class AccountingClientEntity {
             Boolean appliesArt1141Exemption,
             String status
     ) {
+        this(
+                null,
+                nit,
+                dv,
+                lastNitDigit,
+                businessName,
+                personType,
+                taxRegime,
+                ivaPeriodicity,
+                dianResponsibilities,
+                municipalityDaneCode,
+                municipalityName,
+                estimatedAnnualIncomeCop,
+                employeesCount,
+                appliesArt1141Exemption,
+                status
+        );
+    }
+
+    public AccountingClientEntity(
+            Long accountantUserId,
+            String nit,
+            String dv,
+            Integer lastNitDigit,
+            String businessName,
+            String personType,
+            String taxRegime,
+            String ivaPeriodicity,
+            String dianResponsibilities,
+            String municipalityDaneCode,
+            String municipalityName,
+            BigDecimal estimatedAnnualIncomeCop,
+            Integer employeesCount,
+            Boolean appliesArt1141Exemption,
+            String status
+    ) {
+        this.accountantUserId = accountantUserId;
         this.nit = nit;
         this.dv = dv;
         this.lastNitDigit = lastNitDigit;
@@ -102,6 +143,14 @@ public class AccountingClientEntity {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getAccountantUserId() {
+        return accountantUserId;
+    }
+
+    public void setAccountantUserId(Long accountantUserId) {
+        this.accountantUserId = accountantUserId;
     }
 
     public String getNit() {
