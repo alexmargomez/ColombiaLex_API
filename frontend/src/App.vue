@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { apiRequest, formatCOP } from './services/api';
 import ClientPortfolioRadarView from './views/ClientPortfolioRadarView.vue';
 import PayrollUgppPucView from './views/PayrollUgppPucView.vue';
@@ -15,6 +15,55 @@ const legalParameters = ref<any>(null);
 const clientsList = ref<any[]>([]);
 const activeClient = ref<any | null>(null);
 const preselectedObligationForSanction = ref<any | null>(null);
+
+const navItems: Array<{ key: TabKey; code: string; label: string; subtitle: string; icon: string }> = [
+  {
+    key: 'portfolio',
+    code: 'PT-01',
+    label: 'Cartera & Vencimientos',
+    subtitle: 'Radar DIAN por NIT y Expediente',
+    icon: 'fa-solid fa-building-columns',
+  },
+  {
+    key: 'payroll',
+    code: 'PT-02',
+    label: 'Nómina UGPP & PUC',
+    subtitle: 'Tope 40% Ley 1393 y Partida Doble',
+    icon: 'fa-solid fa-file-invoice-dollar',
+  },
+  {
+    key: 'exogena',
+    code: 'PT-03',
+    label: 'Auditoría Exógena 1001',
+    subtitle: 'Módulo 11, DANE y Pre-Form. 350',
+    icon: 'fa-solid fa-table-list',
+  },
+  {
+    key: 'planning',
+    code: 'PT-04',
+    label: 'Planeación Ley 2277',
+    subtitle: 'Art. 383/388 y Ordinario vs RST',
+    icon: 'fa-solid fa-scale-balanced',
+  },
+  {
+    key: 'sanctions',
+    code: 'PT-05',
+    label: 'Sanciones & Recibo 490',
+    subtitle: 'Art. 641/642, Gradualidad 640 y Mora',
+    icon: 'fa-solid fa-gavel',
+  },
+  {
+    key: 'docs',
+    code: 'API',
+    label: 'Integración ERP & REST',
+    subtitle: 'Contratos JSON y Swagger OpenAPI',
+    icon: 'fa-solid fa-code',
+  },
+];
+
+const currentModuleMeta = computed(() => {
+  return navItems.find((item) => item.key === activeTab.value) || navItems[0];
+});
 
 async function loadInitialContext() {
   try {
@@ -69,173 +118,199 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-    <!-- Top Workstation Header & Active Client Context Bar -->
-    <header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-emerald-500 to-indigo-600 flex items-center justify-center shadow-lg"
-          >
-            <i class="fa-solid fa-scale-balanced text-slate-950 text-lg font-black"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h1 class="text-base font-black tracking-tight text-white">ALcontable</h1>
-              <span
-                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-              >
-                Estación de Trabajo para Estudios Contables • DIAN &amp; UGPP
-              </span>
-            </div>
-            <p class="text-xs text-slate-400">
-              Cartera de Clientes en MariaDB • Auditoría UGPP 40% + Asiento PUC • Pre-Auditor Exógena en Lote • Planeación Ley 2277/RST • Sanciones Art. 640
-            </p>
-          </div>
+  <div class="min-h-screen bg-slate-100 text-slate-800 flex flex-col lg:flex-row">
+    <!-- Barra Lateral Ejecutiva ERP Contable (Sidebar) -->
+    <aside class="w-full lg:w-72 bg-slate-900 text-slate-200 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 shrink-0">
+      <!-- Identidad Institucional -->
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-sm shrink-0">
+          <i class="fa-solid fa-landmark text-base"></i>
         </div>
-
-        <!-- Selector Global de Cliente Activo e Indicadores Normativos -->
-        <div class="flex flex-wrap items-center gap-2.5 text-xs">
-          <div v-if="clientsList.length > 0" class="flex items-center gap-2 bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-1.5">
-            <span class="text-amber-300 font-bold text-[11px]">
-              <i class="fa-solid fa-briefcase mr-1"></i>Cliente Activo:
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-extrabold tracking-tight text-white">ALcontable</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-900/80 text-blue-200 border border-blue-700/60">
+              ERP Suite
             </span>
-            <select
-              :value="activeClient?.id"
-              @change="onClientSelectDropdownChange"
-              class="bg-transparent text-white font-semibold focus:outline-none text-xs"
-            >
-              <option v-for="c in clientsList" :key="c.id" :value="c.id" class="bg-slate-900 text-white">
-                {{ c.businessName }} (NIT {{ c.formattedNit }} • {{ c.taxRegime }})
-              </option>
-            </select>
           </div>
+          <p class="text-[11px] text-slate-400">Estación de Auditoría Tributaria &amp; Contable</p>
+        </div>
+      </div>
 
-          <span class="hidden xl:inline-flex px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300">
-            UVT {{ legalParameters?.year || 2026 }}:
-            <strong class="text-amber-300 ml-1">{{ formatCOP(legalParameters?.uvtCOP || 52300) }}</strong>
-            • Sanción Mín. 10 UVT:
-            <strong class="text-rose-300 ml-1">{{ formatCOP(legalParameters?.minimumSanction10UvtCOP || 523000) }}</strong>
+      <!-- Ficha Resumen de Empresa Activa en Sidebar -->
+      <div v-if="activeClient" class="mx-4 mt-4 p-3 rounded-lg bg-slate-800/90 border border-slate-700/80 text-xs space-y-1">
+        <div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+          <span>Expediente Activo</span>
+          <span class="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">
+            {{ activeClient.taxRegime }}
           </span>
+        </div>
+        <div class="font-bold text-white truncate" :title="activeClient.businessName">
+          {{ activeClient.businessName }}
+        </div>
+        <div class="font-mono text-[11px] text-slate-300 flex items-center justify-between">
+          <span>NIT {{ activeClient.formattedNit }}</span>
+          <span class="text-slate-400">Dígito #{{ activeClient.lastNitDigit }}</span>
+        </div>
+      </div>
 
-          <span
-            class="px-2.5 py-1 rounded-full border font-mono text-[11px]"
+      <!-- Menú de Papeles de Trabajo (Navegación Unificada Corporativa) -->
+      <nav class="p-3 space-y-1 flex-1">
+        <div class="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          Papeles de Trabajo &amp; Módulos
+        </div>
+        <button
+          v-for="item in navItems"
+          :key="item.key"
+          @click="activeTab = item.key"
+          class="w-full text-left px-3 py-2.5 rounded-lg transition flex items-start gap-3 group"
+          :class="
+            activeTab === item.key
+              ? 'bg-blue-700 text-white shadow-sm'
+              : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+          "
+        >
+          <div
+            class="w-7 h-7 rounded-md flex items-center justify-center text-xs mt-0.5 shrink-0"
             :class="
-              healthInfo
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+              activeTab === item.key
+                ? 'bg-blue-800 text-white'
+                : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'
             "
           >
-            <i class="fa-solid fa-circle text-[8px] mr-1"></i>
-            {{ healthInfo ? healthInfo.service : 'Conectando...' }}
-          </span>
+            <i :class="item.icon"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-semibold truncate">{{ item.label }}</span>
+              <span
+                class="font-mono text-[10px] px-1.5 py-0.2 rounded"
+                :class="
+                  activeTab === item.key
+                    ? 'bg-blue-800 text-blue-100 font-bold'
+                    : 'bg-slate-800 text-slate-400'
+                "
+              >
+                {{ item.code }}
+              </span>
+            </div>
+            <p
+              class="text-[11px] truncate mt-0.5"
+              :class="activeTab === item.key ? 'text-blue-100' : 'text-slate-400'"
+            >
+              {{ item.subtitle }}
+            </p>
+          </div>
+        </button>
+      </nav>
+
+      <!-- Pie Institucional de Sidebar -->
+      <div class="p-4 border-t border-slate-800 text-[11px] text-slate-400 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span>Motor de Persistencia:</span>
+          <span class="font-mono text-slate-200 font-semibold">MariaDB 11 LTS</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Normativa Base:</span>
+          <span class="font-mono text-slate-300">E.T. • Ley 2277 • UGPP</span>
         </div>
       </div>
+    </aside>
 
-      <!-- Barra de Módulos de la Estación Contable -->
-      <div class="max-w-7xl mx-auto px-4 pb-2.5 flex flex-wrap gap-1.5 text-xs">
-        <button
-          @click="activeTab = 'portfolio'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'portfolio'
-              ? 'bg-amber-500 text-slate-950 font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-satellite-dish mr-1.5"></i>1. Cartera de Clientes &amp; Radar Vencimientos (BD)
-        </button>
+    <!-- Área Derecha: Barra Superior de Contexto + Lienzo de Papeles de Trabajo -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Topbar Ejecutiva Blanca -->
+      <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="px-2.5 py-1 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-mono text-xs font-bold">
+              {{ currentModuleMeta.code }}
+            </span>
+            <div>
+              <h1 class="text-sm font-bold text-slate-900">{{ currentModuleMeta.label }}</h1>
+              <p class="text-xs text-slate-500">{{ currentModuleMeta.subtitle }}</p>
+            </div>
+          </div>
 
-        <button
-          @click="activeTab = 'payroll'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'payroll'
-              ? 'bg-emerald-500 text-slate-950 font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-users-gear mr-1.5"></i>2. Nómina en Lote, UGPP 40% &amp; Comprobante PUC
-        </button>
+          <!-- Selector Global de Cliente Activo e Indicadores Normativos Oficiales -->
+          <div class="flex flex-wrap items-center gap-3 text-xs">
+            <div
+              v-if="clientsList.length > 0"
+              class="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5"
+            >
+              <span class="text-slate-600 font-semibold text-[11px]">
+                <i class="fa-solid fa-building text-blue-700 mr-1"></i>Cliente:
+              </span>
+              <select
+                :value="activeClient?.id"
+                @change="onClientSelectDropdownChange"
+                class="bg-transparent text-slate-900 font-bold focus:outline-none text-xs cursor-pointer"
+              >
+                <option v-for="c in clientsList" :key="c.id" :value="c.id" class="bg-white text-slate-900">
+                  {{ c.businessName }} (NIT {{ c.formattedNit }} • {{ c.taxRegime }})
+                </option>
+              </select>
+            </div>
 
-        <button
-          @click="activeTab = 'exogena'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'exogena'
-              ? 'bg-cyan-500 text-slate-950 font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-file-shield mr-1.5"></i>3. Pre-Auditor Exógena en Lote &amp; Retenciones
-        </button>
+            <div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 font-mono text-[11px] text-slate-700">
+              <span>
+                UVT {{ legalParameters?.year || 2026 }}:
+                <strong class="text-slate-900 font-bold">{{ formatCOP(legalParameters?.uvtCOP || 52300) }}</strong>
+              </span>
+              <span class="text-slate-300">|</span>
+              <span>
+                Sanción Mín. 10 UVT:
+                <strong class="text-red-700 font-bold">{{ formatCOP(legalParameters?.minimumSanction10UvtCOP || 523000) }}</strong>
+              </span>
+            </div>
 
-        <button
-          @click="activeTab = 'planning'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'planning'
-              ? 'bg-indigo-500 text-white font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-chess-knight mr-1.5"></i>4. Planeación Ley 2277 &amp; Ordinario vs SIMPLE
-        </button>
+            <span
+              class="px-2.5 py-1 rounded-full border font-mono text-[11px] font-medium"
+              :class="
+                healthInfo
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-300'
+              "
+            >
+              <i
+                class="fa-solid fa-circle text-[7px] mr-1"
+                :class="healthInfo ? 'text-emerald-600' : 'text-slate-400'"
+              ></i>
+              {{ healthInfo ? 'API & MariaDB Online' : 'Conectando...' }}
+            </span>
+          </div>
+        </div>
+      </header>
 
-        <button
-          @click="activeTab = 'sanctions'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'sanctions'
-              ? 'bg-rose-600 text-white font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-gavel mr-1.5"></i>5. Liquidador Sanciones Art. 640 &amp; Recibo 490
-        </button>
-
-        <button
-          @click="activeTab = 'docs'"
-          class="px-3.5 py-2 rounded-xl font-semibold transition"
-          :class="
-            activeTab === 'docs'
-              ? 'bg-white text-slate-950 font-bold'
-              : 'bg-slate-800/70 text-slate-300 hover:bg-slate-800'
-          "
-        >
-          <i class="fa-solid fa-code mr-1.5"></i>6. API REST &amp; Swagger
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Workstation Area -->
-    <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1">
-      <ClientPortfolioRadarView
-        v-if="activeTab === 'portfolio'"
-        :activeClientId="activeClient?.id"
-        @selectClient="handleSelectClient"
-        @client-created="handleClientCreated"
-        @liquidateObligationSanction="handleLiquidateObligationSanction"
-        @open-sanction="handleLiquidateObligationSanction"
-      />
-      <PayrollUgppPucView
-        v-else-if="activeTab === 'payroll'"
-        :activeClient="activeClient"
-      />
-      <ExogenaBatchAuditView
-        v-else-if="activeTab === 'exogena'"
-        :activeClient="activeClient"
-      />
-      <TaxPlanningLaw2277View
-        v-else-if="activeTab === 'planning'"
-        :activeClient="activeClient"
-      />
-      <DianSanctionsLiquidatorView
-        v-else-if="activeTab === 'sanctions'"
-        :activeClient="activeClient"
-        :preselectedObligation="preselectedObligationForSanction"
-      />
-      <ApiPlaygroundDocsView v-else-if="activeTab === 'docs'" />
-    </main>
+      <!-- Lienzo Principal de Papeles de Trabajo (Gris Papel Contable #F1F5F9) -->
+      <main class="max-w-7xl w-full mx-auto px-6 py-6 flex-1">
+        <ClientPortfolioRadarView
+          v-if="activeTab === 'portfolio'"
+          :activeClientId="activeClient?.id"
+          @selectClient="handleSelectClient"
+          @client-created="handleClientCreated"
+          @liquidateObligationSanction="handleLiquidateObligationSanction"
+          @open-sanction="handleLiquidateObligationSanction"
+        />
+        <PayrollUgppPucView
+          v-else-if="activeTab === 'payroll'"
+          :activeClient="activeClient"
+        />
+        <ExogenaBatchAuditView
+          v-else-if="activeTab === 'exogena'"
+          :activeClient="activeClient"
+        />
+        <TaxPlanningLaw2277View
+          v-else-if="activeTab === 'planning'"
+          :activeClient="activeClient"
+        />
+        <DianSanctionsLiquidatorView
+          v-else-if="activeTab === 'sanctions'"
+          :activeClient="activeClient"
+          :preselectedObligation="preselectedObligationForSanction"
+        />
+        <ApiPlaygroundDocsView v-else-if="activeTab === 'docs'" />
+      </main>
+    </div>
   </div>
 </template>

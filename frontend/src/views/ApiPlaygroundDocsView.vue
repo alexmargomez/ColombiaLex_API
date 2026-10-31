@@ -79,20 +79,24 @@ const endpoints = [
 
 <template>
   <div class="space-y-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="bg-white border border-slate-200 border-t-4 border-t-blue-700 rounded-xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-code text-amber-400"></i>
-          Referencia de Endpoints REST &amp; Motores de Procesamiento en Lote ALcontable (Java 21 + Spring Boot 3.3 + MariaDB 11)
-        </h3>
-        <p class="text-xs text-slate-400 mt-1">
-          Integra los motores de auditoría UGPP, asiento contable PUC, pre-auditoría de Exógena, planeación Ley 2277 y sanciones DIAN desde cualquier ERP.
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono text-[10px] font-bold">
+            OPENAPI 3.1
+          </span>
+          <h3 class="text-base font-bold text-slate-900">
+            Referencia de Endpoints REST &amp; Motores de Procesamiento en Lote ALcontable (Java 21 + Spring Boot 3.3 + MariaDB 11)
+          </h3>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">
+          Integra los motores de auditoría UGPP, asiento contable PUC, pre-auditoría de Exógena, planeación Ley 2277 y sanciones DIAN desde cualquier ERP corporativo.
         </p>
       </div>
       <a
         href="/api/v1/swagger-ui.html"
         target="_blank"
-        class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+        class="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-2xs"
       >
         <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>Abrir Swagger UI Oficial
       </a>
@@ -102,26 +106,26 @@ const endpoints = [
       <div
         v-for="ep in endpoints"
         :key="ep.method + ep.path"
-        class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3"
+        class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3"
       >
         <div class="flex flex-wrap items-center gap-2.5">
           <span
-            class="px-2.5 py-0.5 rounded font-mono text-xs font-bold"
+            class="px-2.5 py-0.5 rounded font-mono text-xs font-bold border"
             :class="
               ep.method === 'POST'
-                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : ep.method === 'PATCH'
-                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                  : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : 'bg-blue-50 text-blue-800 border-blue-200'
             "
           >
             {{ ep.method }}
           </span>
-          <code class="text-sm font-bold text-white font-mono">{{ ep.path }}</code>
+          <code class="text-sm font-bold text-slate-900 font-mono">{{ ep.path }}</code>
         </div>
-        <p class="text-xs text-slate-300">{{ ep.desc }}</p>
+        <p class="text-xs text-slate-600">{{ ep.desc }}</p>
         <pre
-          class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] text-amber-300 font-mono overflow-x-auto"
+          class="bg-slate-900 border border-slate-800 rounded-lg p-3.5 text-[11px] text-slate-100 font-mono overflow-x-auto"
         >{{ ep.sampleCurl }}</pre>
       </div>
     </div>
